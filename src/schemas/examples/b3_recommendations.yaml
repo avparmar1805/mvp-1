@@ -1,0 +1,186 @@
+# Data Product: B3 - Product Recommendation Features
+# Use Case: Feature table for product recommendations based on user interactions
+
+data_product:
+  metadata:
+    name: "product_recommendation_features"
+    version: "1.0.0"
+    description: "Feature table for product recommendations based on user interaction signals including views, cart adds, purchases, and ratings"
+    owner: "ml_team"
+    created_at: "2025-12-07T10:30:00Z"
+    tags:
+      - "recommendations"
+      - "ml"
+      - "features"
+      - "interactions"
+
+  business_context:
+    use_case: "B3"
+    business_metrics:
+      - "view_count"
+      - "cart_count"
+      - "purchase_count"
+      - "avg_rating"
+    dimensions:
+      - "user"
+      - "product"
+    temporal_granularity: "snapshot"
+    stakeholders:
+      - "ml_team"
+      - "recommendation_engine"
+
+  data_model:
+    target_table: "gold.product_recommendation_features"
+    grain: "User-Product pair (snapshot)"
+    schema:
+      - name: "user_id"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "User identifier"
+      - name: "product_id"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "Product identifier"
+      - name: "view_count"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of times user viewed this product"
+      - name: "cart_count"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of times user added product to cart"
+      - name: "purchase_count"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of times user purchased this product"
+      - name: "avg_rating"
+        type: "DECIMAL(3,2)"
+        nullable: true
+        description: "Average rating given by user (1-5)"
+      - name: "days_since_last_interaction"
+        type: "INTEGER"
+        nullable: true
+        description: "Days since last interaction with this product"
+      - name: "category_affinity_score"
+        type: "DECIMAL(5,4)"
+        nullable: true
+        description: "User's affinity score for product category (0-1)"
+      - name: "last_interaction_date"
+        type: "DATE"
+        nullable: true
+        description: "Date of last interaction"
+    primary_keys:
+      - "user_id"
+      - "product_id"
+
+  source_datasets:
+    - name: "bronze.user_interactions"
+      columns:
+        - "user_id"
+        - "product_id"
+        - "interaction_type"
+        - "timestamp"
+        - "rating"
+      alias: "i"
+    - name: "bronze.products"
+      columns:
+        - "product_id"
+        - "category"
+      alias: "p"
+      join_type: "left"
+      join_condition: "i.product_id = p.product_id"
+
+  transformations:
+    language: "SQL"
+    code: |
+      WITH interaction_features AS (
+        SELECT
+          i.user_id,
+          i.product_id,
+          SUM(CASE WHEN i.interaction_type = 'view' THEN 1 ELSE 0 END) AS view_count,
+          SUM(CASE WHEN i.interaction_type = 'cart' THEN 1 ELSE 0 END) AS cart_count,
+          SUM(CASE WHEN i.interaction_type = 'purchase' THEN 1 ELSE 0 END) AS purchase_count,
+          AVG(CASE WHEN i.interaction_type = 'rating' THEN i.rating ELSE NULL END) AS avg_rating,
+          MAX(i.timestamp) AS last_interaction_date
+        FROM bronze.user_interactions i
+        GROUP BY i.user_id, i.product_id
+      ),
+      category_affinity AS (
+        SELECT
+          i.user_id,
+          p.category,
+          COUNT(DISTINCT i.product_id) AS products_in_category,
+          COUNT(*) AS total_interactions
+        FROM bronze.user_interactions i
+        LEFT JOIN bronze.products p ON i.product_id = p.product_id
+        GROUP BY i.user_id, p.category
+      )
+      SELECT
+        f.user_id,
+        f.product_id,
+        f.view_count,
+        f.cart_count,
+        f.purchase_count,
+        f.avg_rating,
+        DATEDIFF(day, f.last_interaction_date, CURRENT_DATE) AS days_since_last_interaction,
+        f.last_interaction_date,
+        CAST(COALESCE(a.products_in_category, 0) AS DECIMAL) / 
+          NULLIF((SELECT COUNT(DISTINCT product_id) FROM bronze.user_interactions WHERE user_id = f.user_id), 0) 
+          AS category_affinity_score
+      FROM interaction_features f
+      LEFT JOIN bronze.products p ON f.product_id = p.product_id
+      LEFT JOIN category_affinity a ON f.user_id = a.user_id AND p.category = a.category
+      WHERE f.view_count > 0 OR f.cart_count > 0 OR f.purchase_count > 0
+
+  quality_rules:
+    - rule: "view_count >= cart_count"
+      rule_type: "consistency"
+      severity: "warning"
+      description: "View count should be >= cart count"
+    - rule: "cart_count >= purchase_count"
+      rule_type: "consistency"
+      severity: "warning"
+      description: "Cart count should be >= purchase count"
+    - rule: "avg_rating IS NULL OR (avg_rating >= 1 AND avg_rating <= 5)"
+      rule_type: "validity"
+      severity: "error"
+      column: "avg_rating"
+      description: "Rating must be between 1 and 5 if not null"
+    - rule: "days_since_last_interaction >= 0"
+      rule_type: "validity"
+      severity: "error"
+      column: "days_since_last_interaction"
+      description: "Days since last interaction must be non-negative"
+    - rule: "category_affinity_score IS NULL OR (category_affinity_score >= 0 AND category_affinity_score <= 1)"
+      rule_type: "validity"
+      severity: "warning"
+      column: "category_affinity_score"
+      description: "Category affinity score must be between 0 and 1"
+
+  sla:
+    freshness: "Daily at 2:00 AM UTC"
+    latency: "< 2 hours"
+    completeness: "> 90%"
+    availability: "99.5% uptime"
+
+  lineage:
+    source_datasets:
+      - "bronze.user_interactions"
+      - "bronze.products"
+    transformations_applied:
+      - "aggregation"
+      - "feature_engineering"
+      - "join"
+      - "calculation"
+    dependencies: []
+
+  documentation:
+    usage_examples:
+      - "SELECT * FROM gold.product_recommendation_features WHERE user_id = 'USR-00000001' ORDER BY view_count DESC"
+      - "SELECT product_id, COUNT(*) as user_count FROM gold.product_recommendation_features WHERE purchase_count > 0 GROUP BY product_id"
+    known_limitations:
+      - "Only includes user-product pairs with at least one interaction"
+      - "Category affinity calculation may be simplified"
+

@@ -1,0 +1,84 @@
+metadata:
+  name: Daily Revenue Metrics
+  version: 1.0.0
+  description: Data product for daily analysis of total revenue, order count.
+  owner: Agentic Builder
+  created_at: '2025-12-20T02:49:02.763725'
+business_context:
+  request: I need a daily sales report showing total revenue and order count by region
+    for the last month.
+  intent:
+    metrics:
+    - total revenue
+    - order count
+    dimensions:
+    - region
+    granularity: daily
+data_model:
+  target_table: gold.daily_revenue_metrics
+  grain: daily, region
+  schema:
+  - name: date
+    type: DATE
+    description: The date of the order
+    nullable: false
+    primary_key: true
+  - name: region
+    type: VARCHAR
+    description: The region where the order was placed
+    nullable: false
+    primary_key: true
+  - name: total_revenue
+    type: DECIMAL
+    description: Total revenue generated from orders on the given date and region
+    nullable: false
+    primary_key: false
+  - name: order_count
+    type: INTEGER
+    description: Total number of orders placed on the given date and region
+    nullable: false
+    primary_key: false
+  primary_keys:
+  - date
+  - region
+source_data:
+  datasets:
+  - orders
+transformation:
+  type: sql
+  code: "SELECT \n  order_date AS date, \n  region, \n  SUM(total_amount) AS total_revenue,\
+    \ \n  COUNT(order_id) AS order_count \nFROM \n  orders \nGROUP BY \n  order_date,\
+    \ \n  region;"
+  explanation: The query selects the order_date and region from the orders table and
+    aggregates the data to calculate the total revenue and order count for each date
+    and region. The total revenue is calculated by summing the total_amount for each
+    group, and the order count is determined by counting the number of order_id entries.
+    The results are grouped by order_date and region to match the target table's grain.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: date
+    description: Ensure the date column is not null as it is a primary key.
+  - check_type: unique
+    column: date
+    description: Ensure the date column is unique in combination with the region column
+      as it is part of the primary key.
+  - check_type: not_null
+    column: region
+    description: Ensure the region column is not null as it is a primary key.
+  - check_type: unique
+    column: region
+    description: Ensure the region column is unique in combination with the date column
+      as it is part of the primary key.
+  - check_type: not_null
+    column: total_revenue
+    description: Ensure the total_revenue column is not null.
+  - check_type: min_value
+    column: total_revenue
+    description: Ensure the total_revenue is greater than or equal to 0.
+  - check_type: not_null
+    column: order_count
+    description: Ensure the order_count column is not null.
+  - check_type: min_value
+    column: order_count
+    description: Ensure the order_count is greater than or equal to 0.

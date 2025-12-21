@@ -1,0 +1,161 @@
+{
+  "dataset_name": "bronze.products",
+  "description": "Product catalog with pricing and category information",
+  "created_at": "2025-12-07T21:14:20.317961",
+  "row_count": 1000,
+  "column_count": 14,
+  "size_bytes": 62523,
+  "schema": [
+    {
+      "name": "product_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 1000
+    },
+    {
+      "name": "product_name",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 998
+    },
+    {
+      "name": "category",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5,
+      "top_values": {
+        "Electronics": 269,
+        "Clothing": 234,
+        "Home": 209,
+        "Sports": 153,
+        "Books": 135
+      }
+    },
+    {
+      "name": "subcategory",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 25
+    },
+    {
+      "name": "brand",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 25
+    },
+    {
+      "name": "price",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 992,
+      "statistics": {
+        "min": 10.04,
+        "max": 1991.51,
+        "mean": 450.05644,
+        "std": 500.06033273526276
+      }
+    },
+    {
+      "name": "cost",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 994,
+      "statistics": {
+        "min": 6.17,
+        "max": 1673.68,
+        "mean": 309.77509,
+        "std": 381.3441753498605
+      }
+    },
+    {
+      "name": "margin_pct",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 883,
+      "statistics": {
+        "min": -57.63,
+        "max": 59.96,
+        "mean": 36.28124,
+        "std": 12.700584510537666
+      }
+    },
+    {
+      "name": "stock_quantity",
+      "type": "int64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 433,
+      "statistics": {
+        "min": 2.0,
+        "max": 498.0,
+        "mean": 241.281,
+        "std": 142.92151902215284
+      }
+    },
+    {
+      "name": "supplier_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 50
+    },
+    {
+      "name": "created_at",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 672
+    },
+    {
+      "name": "is_active",
+      "type": "bool",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 2,
+      "statistics": {
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.909,
+        "std": 0.28775302222878874
+      }
+    },
+    {
+      "name": "rating_avg",
+      "type": "float64",
+      "nullable": true,
+      "null_count": 30,
+      "unique_count": 245,
+      "statistics": {
+        "min": 2.5,
+        "max": 5.0,
+        "mean": 3.7571546391752575,
+        "std": 0.7258829339870065
+      }
+    },
+    {
+      "name": "review_count",
+      "type": "int64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 191,
+      "statistics": {
+        "min": 0.0,
+        "max": 475.0,
+        "mean": 51.7,
+        "std": 56.81968388222937
+      }
+    }
+  ],
+  "quality_issues": [
+    "3% null rating_avg",
+    "1% negative margin_pct"
+  ]
+}

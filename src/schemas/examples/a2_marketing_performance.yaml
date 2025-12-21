@@ -1,0 +1,196 @@
+# Data Product: A2 - Marketing Campaign Performance
+# Use Case: Weekly marketing performance metrics (CTR, CVR, CPA, ROAS)
+
+data_product:
+  metadata:
+    name: "marketing_campaign_performance"
+    version: "1.0.0"
+    description: "Weekly marketing campaign performance report with CTR, CVR, CPA, and ROAS metrics"
+    owner: "marketing_team"
+    created_at: "2025-12-07T10:30:00Z"
+    tags:
+      - "marketing"
+      - "campaign"
+      - "performance"
+      - "weekly"
+
+  business_context:
+    use_case: "A2"
+    business_metrics:
+      - "CTR"
+      - "CVR"
+      - "CPA"
+      - "ROAS"
+    dimensions:
+      - "campaign"
+      - "channel"
+    temporal_granularity: "weekly"
+    stakeholders:
+      - "marketing_team"
+      - "analytics_team"
+
+  data_model:
+    target_table: "gold.marketing_campaign_performance"
+    grain: "Weekly, by campaign"
+    schema:
+      - name: "week"
+        type: "DATE"
+        nullable: false
+        primary_key: true
+        description: "Start of week (Monday)"
+      - name: "campaign_id"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "Campaign identifier"
+      - name: "campaign_name"
+        type: "VARCHAR(200)"
+        nullable: false
+        description: "Campaign name"
+      - name: "channel"
+        type: "VARCHAR(50)"
+        nullable: false
+        description: "Marketing channel"
+      - name: "impressions"
+        type: "INTEGER"
+        nullable: false
+        description: "Total impressions"
+      - name: "clicks"
+        type: "INTEGER"
+        nullable: false
+        description: "Total clicks"
+      - name: "conversions"
+        type: "INTEGER"
+        nullable: false
+        description: "Total conversions"
+      - name: "spend"
+        type: "DECIMAL(12,2)"
+        nullable: false
+        description: "Total campaign spend"
+      - name: "revenue"
+        type: "DECIMAL(12,2)"
+        nullable: false
+        description: "Total revenue from conversions"
+      - name: "ctr"
+        type: "DECIMAL(5,4)"
+        nullable: false
+        description: "Click-through rate (clicks / impressions)"
+      - name: "cvr"
+        type: "DECIMAL(5,4)"
+        nullable: true
+        description: "Conversion rate (conversions / clicks)"
+      - name: "cpa"
+        type: "DECIMAL(10,2)"
+        nullable: true
+        description: "Cost per acquisition (spend / conversions)"
+      - name: "roas"
+        type: "DECIMAL(10,4)"
+        nullable: true
+        description: "Return on ad spend (revenue / spend)"
+    primary_keys:
+      - "week"
+      - "campaign_id"
+
+  source_datasets:
+    - name: "bronze.marketing_campaigns"
+      columns:
+        - "campaign_id"
+        - "campaign_name"
+        - "channel"
+      alias: "c"
+    - name: "bronze.marketing_events"
+      columns:
+        - "campaign_id"
+        - "event_date"
+        - "event_type"
+        - "cost"
+        - "revenue"
+      alias: "e"
+      join_type: "inner"
+      join_condition: "e.campaign_id = c.campaign_id"
+
+  transformations:
+    language: "SQL"
+    code: |
+      WITH weekly_events AS (
+        SELECT
+          DATE_TRUNC('week', e.event_date) AS week,
+          e.campaign_id,
+          c.campaign_name,
+          c.channel,
+          SUM(CASE WHEN e.event_type = 'impression' THEN 1 ELSE 0 END) AS impressions,
+          SUM(CASE WHEN e.event_type = 'click' THEN 1 ELSE 0 END) AS clicks,
+          SUM(CASE WHEN e.event_type = 'conversion' THEN 1 ELSE 0 END) AS conversions,
+          SUM(e.cost) AS spend,
+          SUM(e.revenue) AS revenue
+        FROM bronze.marketing_events e
+        INNER JOIN bronze.marketing_campaigns c ON e.campaign_id = c.campaign_id
+        GROUP BY DATE_TRUNC('week', e.event_date), e.campaign_id, c.campaign_name, c.channel
+      )
+      SELECT
+        week,
+        campaign_id,
+        campaign_name,
+        channel,
+        impressions,
+        clicks,
+        conversions,
+        spend,
+        revenue,
+        CASE WHEN impressions > 0 THEN CAST(clicks AS DECIMAL) / impressions ELSE 0 END AS ctr,
+        CASE WHEN clicks > 0 THEN CAST(conversions AS DECIMAL) / clicks ELSE NULL END AS cvr,
+        CASE WHEN conversions > 0 THEN spend / conversions ELSE NULL END AS cpa,
+        CASE WHEN spend > 0 THEN revenue / spend ELSE NULL END AS roas
+      FROM weekly_events
+      ORDER BY week DESC, campaign_id
+
+  quality_rules:
+    - rule: "impressions >= clicks"
+      rule_type: "consistency"
+      severity: "error"
+      description: "Impressions must be >= clicks"
+    - rule: "clicks >= conversions"
+      rule_type: "consistency"
+      severity: "error"
+      description: "Clicks must be >= conversions"
+    - rule: "ctr BETWEEN 0 AND 1"
+      rule_type: "validity"
+      severity: "error"
+      column: "ctr"
+      description: "CTR must be between 0 and 1"
+    - rule: "cvr IS NULL OR cvr BETWEEN 0 AND 1"
+      rule_type: "validity"
+      severity: "warning"
+      column: "cvr"
+      description: "CVR must be between 0 and 1 if not null"
+    - rule: "roas >= 0"
+      rule_type: "validity"
+      severity: "warning"
+      column: "roas"
+      description: "ROAS should be non-negative"
+
+  sla:
+    freshness: "Weekly on Monday at 8:00 AM UTC"
+    latency: "< 1 hour"
+    completeness: "> 95%"
+    availability: "99.9% uptime"
+
+  lineage:
+    source_datasets:
+      - "bronze.marketing_campaigns"
+      - "bronze.marketing_events"
+    transformations_applied:
+      - "time_truncation"
+      - "join"
+      - "aggregation"
+      - "metric_calculation"
+    dependencies: []
+
+  documentation:
+    usage_examples:
+      - "SELECT * FROM gold.marketing_campaign_performance WHERE week = DATE_TRUNC('week', CURRENT_DATE)"
+      - "SELECT campaign_name, AVG(roas) FROM gold.marketing_campaign_performance WHERE week >= CURRENT_DATE - INTERVAL '4 weeks' GROUP BY campaign_name"
+    known_limitations:
+      - "CTR/CVR calculations assume all events are properly classified"
+      - "Revenue only includes direct conversion revenue, not downstream value"
+

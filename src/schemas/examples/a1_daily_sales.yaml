@@ -1,0 +1,146 @@
+# Data Product: A1 - Daily Sales Analytics
+# Use Case: Daily sales metrics by region and category
+
+data_product:
+  metadata:
+    name: "daily_sales_analytics"
+    version: "1.0.0"
+    description: "Daily sales analytics showing revenue, order count, and units sold, broken down by region and product category"
+    owner: "analytics_team"
+    created_at: "2025-12-07T10:30:00Z"
+    tags:
+      - "sales"
+      - "analytics"
+      - "daily"
+      - "revenue"
+
+  business_context:
+    use_case: "A1"
+    business_metrics:
+      - "revenue"
+      - "order_count"
+      - "units_sold"
+    dimensions:
+      - "region"
+      - "category"
+    temporal_granularity: "daily"
+    stakeholders:
+      - "sales_team"
+      - "analytics_team"
+      - "executives"
+
+  data_model:
+    target_table: "gold.daily_sales_analytics"
+    grain: "Daily, by region and category"
+    schema:
+      - name: "date"
+        type: "DATE"
+        nullable: false
+        primary_key: true
+        description: "Date of the sales data"
+      - name: "region"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "Sales region"
+      - name: "category"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "Product category"
+      - name: "total_revenue"
+        type: "DECIMAL(18,2)"
+        nullable: false
+        description: "Total revenue for the day/region/category"
+      - name: "order_count"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of distinct orders"
+      - name: "units_sold"
+        type: "INTEGER"
+        nullable: false
+        description: "Total units sold"
+    primary_keys:
+      - "date"
+      - "region"
+      - "category"
+
+  source_datasets:
+    - name: "bronze.orders"
+      columns:
+        - "order_id"
+        - "order_date"
+        - "quantity"
+        - "total_amount"
+        - "region"
+        - "status"
+        - "product_id"
+      alias: "o"
+    - name: "bronze.products"
+      columns:
+        - "product_id"
+        - "category"
+      alias: "p"
+      join_type: "inner"
+      join_condition: "o.product_id = p.product_id"
+
+  transformations:
+    language: "SQL"
+    code: |
+      SELECT
+        DATE(o.order_date) AS date,
+        o.region,
+        p.category,
+        SUM(o.total_amount) AS total_revenue,
+        COUNT(DISTINCT o.order_id) AS order_count,
+        SUM(o.quantity) AS units_sold
+      FROM bronze.orders o
+      INNER JOIN bronze.products p ON o.product_id = p.product_id
+      WHERE o.status = 'completed'
+      GROUP BY DATE(o.order_date), o.region, p.category
+      ORDER BY date DESC, region, category
+
+  quality_rules:
+    - rule: "total_revenue > 0"
+      rule_type: "validity"
+      severity: "error"
+      description: "Revenue must be positive"
+    - rule: "date IS NOT NULL"
+      rule_type: "completeness"
+      severity: "error"
+      column: "date"
+      description: "Date must not be null"
+    - rule: "order_count >= 1"
+      rule_type: "validity"
+      severity: "warning"
+      description: "Order count should be at least 1"
+    - rule: "units_sold >= order_count"
+      rule_type: "consistency"
+      severity: "warning"
+      description: "Units sold should be >= order count (at least 1 unit per order)"
+
+  sla:
+    freshness: "Daily at 6:00 AM UTC"
+    latency: "< 30 minutes"
+    completeness: "> 99%"
+    availability: "99.9% uptime"
+
+  lineage:
+    source_datasets:
+      - "bronze.orders"
+      - "bronze.products"
+    transformations_applied:
+      - "date_truncation"
+      - "join"
+      - "aggregation"
+      - "filtering"
+    dependencies: []
+
+  documentation:
+    usage_examples:
+      - "SELECT * FROM gold.daily_sales_analytics WHERE date = CURRENT_DATE - 1"
+      - "SELECT region, SUM(total_revenue) FROM gold.daily_sales_analytics WHERE date >= CURRENT_DATE - 7 GROUP BY region"
+    known_limitations:
+      - "Only includes completed orders"
+      - "Category comes from products table, may not match order.category if data quality issues exist"
+

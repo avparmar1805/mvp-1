@@ -1,0 +1,120 @@
+{
+  "dataset_name": "bronze.user_interactions",
+  "description": "User-product interactions for recommendation features",
+  "created_at": "2025-12-07T21:15:37.821903",
+  "row_count": 200000,
+  "column_count": 10,
+  "size_bytes": 4739932,
+  "schema": [
+    {
+      "name": "interaction_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 200000
+    },
+    {
+      "name": "user_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 14764
+    },
+    {
+      "name": "product_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 1001
+    },
+    {
+      "name": "interaction_type",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5,
+      "top_values": {
+        "view": 139671,
+        "cart": 30177,
+        "purchase": 16002,
+        "rating": 10086,
+        "wishlist": 4064
+      }
+    },
+    {
+      "name": "timestamp",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 199488
+    },
+    {
+      "name": "rating",
+      "type": "float64",
+      "nullable": true,
+      "null_count": 189914,
+      "unique_count": 5,
+      "statistics": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 3.89797739440809,
+        "std": 1.178808871641109
+      }
+    },
+    {
+      "name": "session_id",
+      "type": "object",
+      "nullable": true,
+      "null_count": 6000,
+      "unique_count": 62534
+    },
+    {
+      "name": "duration_seconds",
+      "type": "float64",
+      "nullable": true,
+      "null_count": 60329,
+      "unique_count": 1094,
+      "statistics": {
+        "min": 10.0,
+        "max": 1800.0,
+        "mean": 89.71783691675438,
+        "std": 115.75830989718166
+      }
+    },
+    {
+      "name": "referrer",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 10,
+      "top_values": {
+        "direct": 50109,
+        "google": 40308,
+        "facebook": 23904,
+        "email_campaign": 20009,
+        "instagram": 19870,
+        "affiliate": 16000,
+        "twitter": 9883,
+        "pinterest": 7894,
+        "organic_search": 6051,
+        "tiktok": 5972
+      }
+    },
+    {
+      "name": "device_type",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 3,
+      "top_values": {
+        "mobile": 109701,
+        "desktop": 70082,
+        "tablet": 20217
+      }
+    }
+  ],
+  "quality_issues": [
+    "5% invalid product_id",
+    "3% null session_id"
+  ]
+}

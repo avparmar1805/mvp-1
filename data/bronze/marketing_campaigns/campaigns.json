@@ -1,0 +1,119 @@
+{
+  "dataset_name": "bronze.marketing_campaigns",
+  "description": "Marketing campaign master data with budget and targeting",
+  "created_at": "2025-12-07T21:14:22.373366",
+  "row_count": 50,
+  "column_count": 10,
+  "size_bytes": 9710,
+  "schema": [
+    {
+      "name": "campaign_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 50
+    },
+    {
+      "name": "campaign_name",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 50
+    },
+    {
+      "name": "channel",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5,
+      "top_values": {
+        "social": 16,
+        "email": 13,
+        "video": 8,
+        "search": 8,
+        "display": 5
+      }
+    },
+    {
+      "name": "start_date",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 48
+    },
+    {
+      "name": "end_date",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 48
+    },
+    {
+      "name": "budget",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 50,
+      "statistics": {
+        "min": 2746.28,
+        "max": 145072.26,
+        "mean": 52114.706999999995,
+        "std": 37459.13973414843
+      }
+    },
+    {
+      "name": "target_audience",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 8,
+      "top_values": {
+        "Premium Members": 8,
+        "Cart Abandoners": 7,
+        "New Customers": 7,
+        "High Value Customers": 7,
+        "Social Media Followers": 6,
+        "Mobile App Users": 6,
+        "Returning Customers": 5,
+        "Newsletter Subscribers": 4
+      }
+    },
+    {
+      "name": "objective",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 3,
+      "top_values": {
+        "consideration": 23,
+        "awareness": 17,
+        "conversion": 10
+      }
+    },
+    {
+      "name": "status",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 1,
+      "top_values": {
+        "completed": 50
+      }
+    },
+    {
+      "name": "owner",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5,
+      "top_values": {
+        "David Kim": 12,
+        "Emily Rodriguez": 11,
+        "Sarah Johnson": 11,
+        "Lisa Thompson": 9,
+        "Mike Chen": 7
+      }
+    }
+  ],
+  "quality_issues": []
+}

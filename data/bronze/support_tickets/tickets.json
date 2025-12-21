@@ -1,0 +1,136 @@
+{
+  "dataset_name": "bronze.support_tickets",
+  "description": "Customer support tickets with resolution metrics",
+  "created_at": "2025-12-07T21:15:38.395971",
+  "row_count": 5000,
+  "column_count": 11,
+  "size_bytes": 190420,
+  "schema": [
+    {
+      "name": "ticket_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5000
+    },
+    {
+      "name": "customer_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 3823
+    },
+    {
+      "name": "created_at",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 5000
+    },
+    {
+      "name": "resolved_at",
+      "type": "datetime64[ns]",
+      "nullable": true,
+      "null_count": 767,
+      "unique_count": 4224
+    },
+    {
+      "name": "category",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 4,
+      "top_values": {
+        "product_issue": 2044,
+        "billing": 1235,
+        "shipping": 1019,
+        "account": 702
+      }
+    },
+    {
+      "name": "priority",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 4,
+      "top_values": {
+        "medium": 1703,
+        "low": 1633,
+        "high": 1293,
+        "critical": 371
+      }
+    },
+    {
+      "name": "status",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 4,
+      "top_values": {
+        "closed": 3467,
+        "resolved": 766,
+        "in_progress": 510,
+        "open": 257
+      }
+    },
+    {
+      "name": "satisfaction_score",
+      "type": "float64",
+      "nullable": true,
+      "null_count": 767,
+      "unique_count": 5,
+      "statistics": {
+        "min": 1.0,
+        "max": 5.0,
+        "mean": 3.645405150011812,
+        "std": 1.165910032026766
+      }
+    },
+    {
+      "name": "resolution_time_hours",
+      "type": "float64",
+      "nullable": true,
+      "null_count": 767,
+      "unique_count": 3090,
+      "statistics": {
+        "min": 1.02,
+        "max": 71.98,
+        "mean": 29.873782187573823,
+        "std": 18.1695357763423
+      }
+    },
+    {
+      "name": "agent_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 10,
+      "top_values": {
+        "AGT-010": 535,
+        "AGT-004": 507,
+        "AGT-009": 506,
+        "AGT-002": 506,
+        "AGT-005": 505,
+        "AGT-003": 503,
+        "AGT-006": 499,
+        "AGT-001": 489,
+        "AGT-008": 481,
+        "AGT-007": 469
+      }
+    },
+    {
+      "name": "channel",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 4,
+      "top_values": {
+        "email": 2082,
+        "chat": 1449,
+        "phone": 988,
+        "self_service": 481
+      }
+    }
+  ],
+  "quality_issues": []
+}

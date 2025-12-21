@@ -1,0 +1,39 @@
+# Core
+python-dotenv==1.0.0
+pydantic==2.5.3
+pyyaml==6.0.1
+jsonschema==4.20.0
+tenacity==8.2.3
+
+# Data Generation
+faker==20.1.0
+numpy==1.26.2
+pandas==2.1.4
+pyarrow==14.0.1
+mimesis==11.1.0
+
+# Knowledge Graph
+neo4j==5.15.0
+networkx==3.2.1
+
+# LLM & Agents (configure API keys before using)
+openai>=1.6.1
+anthropic==0.8.1
+langchain==0.1.0
+langgraph==0.0.20
+
+# Data Processing
+duckdb==0.9.2
+sqlparse==0.4.4
+polars==0.19.19
+
+# API & UI
+fastapi==0.108.0
+uvicorn==0.25.0
+streamlit==1.29.0
+
+# Testing & Logging
+pytest==7.4.3
+pytest-asyncio==0.21.1
+loguru==0.7.2
+

@@ -1,0 +1,104 @@
+metadata:
+  name: Weekly Marketing Metrics
+  version: 1.0.0
+  description: Data product for weekly analysis of CTR, CVR, CPA, ROAS.
+  owner: Agentic Builder
+  created_at: '2025-12-20T02:49:19.191943'
+business_context:
+  request: Create a weekly marketing report with CTR, CVR, CPA, and ROAS
+  intent:
+    metrics:
+    - CTR
+    - CVR
+    - CPA
+    - ROAS
+    dimensions: []
+    granularity: weekly
+data_model:
+  target_table: gold.weekly_marketing_metrics
+  grain: weekly
+  schema:
+  - name: week_start_date
+    type: DATE
+    description: The start date of the week for which metrics are calculated
+    nullable: false
+    primary_key: true
+  - name: campaign_id
+    type: VARCHAR
+    description: Unique identifier for the marketing campaign
+    nullable: false
+    primary_key: true
+  - name: ctr
+    type: DECIMAL
+    description: Click-through rate calculated as clicks divided by impressions
+    nullable: true
+    primary_key: false
+  - name: cvr
+    type: DECIMAL
+    description: Conversion rate calculated as conversions divided by clicks
+    nullable: true
+    primary_key: false
+  - name: cpa
+    type: DECIMAL
+    description: Cost per acquisition calculated as total cost divided by conversions
+    nullable: true
+    primary_key: false
+  - name: roas
+    type: DECIMAL
+    description: Return on ad spend calculated as revenue divided by cost
+    nullable: true
+    primary_key: false
+  primary_keys:
+  - week_start_date
+  - campaign_id
+source_data:
+  datasets:
+  - marketing_events
+transformation:
+  type: sql
+  code: WITH weekly_data AS (SELECT DATE_TRUNC('week', event_date) AS week_start_date,
+    campaign_id, COUNT(CASE WHEN event_type = 'impression' THEN 1 END) AS impressions,
+    COUNT(CASE WHEN event_type = 'click' THEN 1 END) AS clicks, COUNT(CASE WHEN event_type
+    = 'conversion' THEN 1 END) AS conversions, SUM(cost) AS total_cost, SUM(revenue)
+    AS total_revenue FROM marketing_events GROUP BY DATE_TRUNC('week', event_date),
+    campaign_id) SELECT week_start_date, campaign_id, CASE WHEN impressions > 0 THEN
+    CAST(clicks AS DECIMAL) / impressions ELSE NULL END AS ctr, CASE WHEN clicks >
+    0 THEN CAST(conversions AS DECIMAL) / clicks ELSE NULL END AS cvr, CASE WHEN conversions
+    > 0 THEN total_cost / conversions ELSE NULL END AS cpa, CASE WHEN total_cost >
+    0 THEN total_revenue / total_cost ELSE NULL END AS roas FROM weekly_data;
+  explanation: The query first aggregates the data from the marketing_events table
+    on a weekly basis using a common table expression (CTE) named weekly_data. It
+    calculates the total number of impressions, clicks, and conversions, as well as
+    the total cost and revenue for each campaign per week. Then, it calculates the
+    click-through rate (ctr), conversion rate (cvr), cost per acquisition (cpa), and
+    return on ad spend (roas) using these aggregated values. The results are selected
+    with the appropriate aliases to match the target schema.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: week_start_date
+    description: Ensure the week_start_date is not null as it is a primary key.
+  - check_type: unique
+    column: week_start_date
+    description: Ensure the week_start_date is unique as it is a primary key.
+  - check_type: not_null
+    column: campaign_id
+    description: Ensure the campaign_id is not null as it is a primary key.
+  - check_type: unique
+    column: campaign_id
+    description: Ensure the combination of week_start_date and campaign_id is unique
+      as they form a composite primary key.
+  - check_type: min_value
+    column: ctr
+    description: Ensure the click-through rate (ctr) is greater than or equal to 0.
+  - check_type: min_value
+    column: cvr
+    description: Ensure the conversion rate (cvr) is greater than or equal to 0.
+  - check_type: min_value
+    column: cpa
+    description: Ensure the cost per acquisition (cpa) is greater than or equal to
+      0.
+  - check_type: min_value
+    column: roas
+    description: Ensure the return on ad spend (roas) is greater than or equal to
+      0.

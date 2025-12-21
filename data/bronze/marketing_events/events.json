@@ -1,0 +1,128 @@
+{
+  "dataset_name": "bronze.marketing_events",
+  "description": "Marketing events with funnel metrics (impressions, clicks, conversions)",
+  "created_at": "2025-12-07T21:14:34.549316",
+  "row_count": 500000,
+  "column_count": 10,
+  "size_bytes": 11310990,
+  "schema": [
+    {
+      "name": "event_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 500000
+    },
+    {
+      "name": "campaign_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 51
+    },
+    {
+      "name": "event_date",
+      "type": "datetime64[ns]",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 496020
+    },
+    {
+      "name": "event_type",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 3,
+      "top_values": {
+        "impression": 399785,
+        "click": 75284,
+        "conversion": 24931
+      }
+    },
+    {
+      "name": "user_id",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 150323
+    },
+    {
+      "name": "cost",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 533,
+      "statistics": {
+        "min": 0.0,
+        "max": 5.0,
+        "mean": 0.2510468531999999,
+        "std": 0.7382104519458123
+      }
+    },
+    {
+      "name": "revenue",
+      "type": "float64",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 19583,
+      "statistics": {
+        "min": 0.0,
+        "max": 499.97,
+        "mean": 12.757285200000009,
+        "std": 64.01206746305435
+      }
+    },
+    {
+      "name": "device_type",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 3,
+      "top_values": {
+        "mobile": 250347,
+        "desktop": 199592,
+        "tablet": 50061
+      }
+    },
+    {
+      "name": "browser",
+      "type": "object",
+      "nullable": false,
+      "null_count": 0,
+      "unique_count": 8,
+      "top_values": {
+        "Chrome": 147257,
+        "Chrome Mobile": 112704,
+        "Safari Mobile": 112639,
+        "Safari": 59994,
+        "Samsung Browser": 25004,
+        "Firefox": 23910,
+        "Edge": 15974,
+        "Other": 2518
+      }
+    },
+    {
+      "name": "location",
+      "type": "object",
+      "nullable": true,
+      "null_count": 10000,
+      "unique_count": 20,
+      "top_values": {
+        "Portland, OR": 24700,
+        "Columbus, OH": 24662,
+        "Boston, MA": 24626,
+        "Houston, TX": 24607,
+        "Fort Worth, TX": 24584,
+        "Austin, TX": 24582,
+        "Philadelphia, PA": 24574,
+        "San Antonio, TX": 24557,
+        "Chicago, IL": 24543,
+        "San Diego, CA": 24539
+      }
+    }
+  ],
+  "quality_issues": [
+    "1% invalid campaign_id",
+    "2% null location"
+  ]
+}

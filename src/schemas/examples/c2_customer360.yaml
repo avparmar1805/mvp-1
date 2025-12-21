@@ -1,0 +1,232 @@
+# Data Product: C2 - Customer 360
+# Use Case: Unified customer view combining profile, transaction history, loyalty status, and support interactions
+
+data_product:
+  metadata:
+    name: "customer_360"
+    version: "1.0.0"
+    description: "Unified customer 360 view combining profile, transaction history, loyalty status, and support interactions"
+    owner: "customer_success_team"
+    created_at: "2025-12-07T10:30:00Z"
+    tags:
+      - "customer"
+      - "360"
+      - "unified"
+      - "master_data"
+
+  business_context:
+    use_case: "C2"
+    business_metrics:
+      - "total_orders"
+      - "total_revenue"
+      - "avg_order_value"
+      - "avg_satisfaction_score"
+    dimensions:
+      - "customer"
+    temporal_granularity: "snapshot"
+    stakeholders:
+      - "customer_success"
+      - "sales_team"
+      - "support_team"
+
+  data_model:
+    target_table: "gold.customer_360"
+    grain: "One row per customer (snapshot)"
+    schema:
+      - name: "customer_id"
+        type: "VARCHAR(50)"
+        nullable: false
+        primary_key: true
+        description: "Unique customer identifier"
+      - name: "name"
+        type: "VARCHAR(100)"
+        nullable: false
+        description: "Customer name"
+      - name: "email"
+        type: "VARCHAR(100)"
+        nullable: false
+        description: "Customer email"
+      - name: "signup_date"
+        type: "DATE"
+        nullable: false
+        description: "Customer signup date"
+      - name: "loyalty_tier"
+        type: "VARCHAR(20)"
+        nullable: false
+        description: "Current loyalty tier (bronze/silver/gold/platinum)"
+      - name: "segment"
+        type: "VARCHAR(50)"
+        nullable: false
+        description: "Customer segment"
+      - name: "total_orders"
+        type: "INTEGER"
+        nullable: false
+        description: "Total number of orders"
+      - name: "total_revenue"
+        type: "DECIMAL(12,2)"
+        nullable: false
+        description: "Total lifetime revenue"
+      - name: "avg_order_value"
+        type: "DECIMAL(10,2)"
+        nullable: true
+        description: "Average order value"
+      - name: "last_order_date"
+        type: "DATE"
+        nullable: true
+        description: "Date of most recent order"
+      - name: "days_since_last_order"
+        type: "INTEGER"
+        nullable: true
+        description: "Days since last order"
+      - name: "open_tickets"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of open support tickets"
+      - name: "resolved_tickets"
+        type: "INTEGER"
+        nullable: false
+        description: "Number of resolved support tickets"
+      - name: "avg_satisfaction_score"
+        type: "DECIMAL(3,2)"
+        nullable: true
+        description: "Average satisfaction score from support tickets (1-5)"
+      - name: "avg_resolution_time_hours"
+        type: "DECIMAL(10,2)"
+        nullable: true
+        description: "Average ticket resolution time in hours"
+    primary_keys:
+      - "customer_id"
+
+  source_datasets:
+    - name: "bronze.customers"
+      columns:
+        - "customer_id"
+        - "name"
+        - "email"
+        - "signup_date"
+        - "loyalty_tier"
+        - "segment"
+      alias: "c"
+    - name: "bronze.orders"
+      columns:
+        - "customer_id"
+        - "order_date"
+        - "total_amount"
+        - "status"
+      alias: "o"
+      join_type: "left"
+      join_condition: "o.customer_id = c.customer_id"
+    - name: "bronze.support_tickets"
+      columns:
+        - "customer_id"
+        - "status"
+        - "satisfaction_score"
+        - "resolution_time_hours"
+      alias: "t"
+      join_type: "left"
+      join_condition: "t.customer_id = c.customer_id"
+
+  transformations:
+    language: "SQL"
+    code: |
+      WITH order_metrics AS (
+        SELECT
+          customer_id,
+          COUNT(DISTINCT CASE WHEN status = 'completed' THEN order_id END) AS total_orders,
+          SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END) AS total_revenue,
+          MAX(CASE WHEN status = 'completed' THEN order_date END) AS last_order_date
+        FROM bronze.orders
+        GROUP BY customer_id
+      ),
+      ticket_metrics AS (
+        SELECT
+          customer_id,
+          SUM(CASE WHEN status IN ('open', 'in_progress') THEN 1 ELSE 0 END) AS open_tickets,
+          SUM(CASE WHEN status IN ('resolved', 'closed') THEN 1 ELSE 0 END) AS resolved_tickets,
+          AVG(CASE WHEN status IN ('resolved', 'closed') THEN satisfaction_score END) AS avg_satisfaction_score,
+          AVG(resolution_time_hours) AS avg_resolution_time_hours
+        FROM bronze.support_tickets
+        GROUP BY customer_id
+      )
+      SELECT
+        c.customer_id,
+        c.name,
+        c.email,
+        c.signup_date,
+        c.loyalty_tier,
+        c.segment,
+        COALESCE(o.total_orders, 0) AS total_orders,
+        COALESCE(o.total_revenue, 0) AS total_revenue,
+        CASE 
+          WHEN o.total_orders > 0 THEN o.total_revenue / o.total_orders 
+          ELSE NULL 
+        END AS avg_order_value,
+        o.last_order_date,
+        DATEDIFF(day, o.last_order_date, CURRENT_DATE) AS days_since_last_order,
+        COALESCE(t.open_tickets, 0) AS open_tickets,
+        COALESCE(t.resolved_tickets, 0) AS resolved_tickets,
+        t.avg_satisfaction_score,
+        t.avg_resolution_time_hours
+      FROM bronze.customers c
+      LEFT JOIN order_metrics o ON c.customer_id = o.customer_id
+      LEFT JOIN ticket_metrics t ON c.customer_id = t.customer_id
+
+  quality_rules:
+    - rule: "customer_id IS NOT NULL"
+      rule_type: "completeness"
+      severity: "error"
+      column: "customer_id"
+      description: "Customer ID must not be null"
+    - rule: "email LIKE '%@%.%'"
+      rule_type: "validity"
+      severity: "error"
+      column: "email"
+      description: "Email must be in valid format"
+    - rule: "total_revenue >= 0"
+      rule_type: "validity"
+      severity: "error"
+      column: "total_revenue"
+      description: "Total revenue must be non-negative"
+    - rule: "total_orders >= 0"
+      rule_type: "validity"
+      severity: "error"
+      column: "total_orders"
+      description: "Total orders must be non-negative"
+    - rule: "avg_order_value IS NULL OR (total_revenue / total_orders = avg_order_value)"
+      rule_type: "consistency"
+      severity: "warning"
+      description: "Average order value should match total_revenue / total_orders"
+    - rule: "avg_satisfaction_score IS NULL OR (avg_satisfaction_score >= 1 AND avg_satisfaction_score <= 5)"
+      rule_type: "validity"
+      severity: "error"
+      column: "avg_satisfaction_score"
+      description: "Satisfaction score must be between 1 and 5 if not null"
+
+  sla:
+    freshness: "Daily at 4:00 AM UTC"
+    latency: "< 1 hour"
+    completeness: "> 99%"
+    availability: "99.9% uptime"
+
+  lineage:
+    source_datasets:
+      - "bronze.customers"
+      - "bronze.orders"
+      - "bronze.support_tickets"
+    transformations_applied:
+      - "aggregation"
+      - "join"
+      - "calculation"
+      - "enrichment"
+    dependencies: []
+
+  documentation:
+    usage_examples:
+      - "SELECT * FROM gold.customer_360 WHERE customer_id = 'CUST-00000001'"
+      - "SELECT loyalty_tier, COUNT(*), AVG(total_revenue) FROM gold.customer_360 GROUP BY loyalty_tier"
+      - "SELECT * FROM gold.customer_360 WHERE open_tickets > 0 ORDER BY avg_satisfaction_score DESC"
+    known_limitations:
+      - "Only includes completed orders in revenue calculations"
+      - "Satisfaction scores only from resolved/closed tickets"
+      - "Days since last order calculated from completed orders only"
+
