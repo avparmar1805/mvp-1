@@ -1,0 +1,137 @@
+metadata:
+  name: Customer Group Metrics
+  version: 1.0.0
+  description: Data product for  analysis of customer group.
+  owner: Agentic Builder
+  created_at: '2026-01-01T17:59:02.191367'
+business_context:
+  request: Segment customers into VIP, Loyal, and At-Risk groups.
+  intent:
+    metrics:
+    - customer group
+    dimensions: []
+    granularity: ''
+data_model:
+  target_table: gold.customer_group_metrics
+  grain: customer_id
+  schema:
+  - name: customer_id
+    type: VARCHAR
+    description: Unique identifier for customer
+    nullable: false
+    primary_key: true
+  - name: name
+    type: VARCHAR
+    description: Name or title of the customer
+    nullable: false
+    primary_key: false
+  - name: email
+    type: VARCHAR
+    description: Email address of the customer
+    nullable: false
+    primary_key: false
+  - name: phone
+    type: VARCHAR
+    description: Phone number of the customer
+    nullable: true
+    primary_key: false
+  - name: signup_date
+    type: DATE
+    description: Date of signup
+    nullable: false
+    primary_key: false
+  - name: loyalty_tier
+    type: VARCHAR
+    description: Customer loyalty tier (bronze/silver/gold/platinum)
+    nullable: false
+    primary_key: false
+  - name: total_lifetime_value
+    type: DECIMAL
+    description: Total customer lifetime value
+    nullable: false
+    primary_key: false
+  - name: segment
+    type: VARCHAR
+    description: Customer segment classification
+    nullable: false
+    primary_key: false
+  - name: address_city
+    type: VARCHAR
+    description: City of the customer's address
+    nullable: false
+    primary_key: false
+  - name: address_state
+    type: VARCHAR
+    description: State of the customer's address
+    nullable: false
+    primary_key: false
+  - name: address_country
+    type: VARCHAR
+    description: Country of the customer's address
+    nullable: false
+    primary_key: false
+  - name: date_of_birth
+    type: DATE
+    description: Date of birth of the customer
+    nullable: false
+    primary_key: false
+  - name: gender
+    type: VARCHAR
+    description: Gender of the customer
+    nullable: false
+    primary_key: false
+  - name: preferred_contact_method
+    type: VARCHAR
+    description: Preferred contact method of the customer
+    nullable: false
+    primary_key: false
+  primary_keys:
+  - customer_id
+source_data:
+  datasets:
+  - marketing_campaigns
+  - customers
+transformation:
+  type: sql
+  code: "SELECT \n  c.customer_id AS customer_id, \n  c.name AS name, \n  c.email\
+    \ AS email, \n  c.phone AS phone, \n  c.signup_date AS signup_date, \n  c.loyalty_tier\
+    \ AS loyalty_tier, \n  c.total_lifetime_value AS total_lifetime_value, \n  c.segment\
+    \ AS segment, \n  c.address_city AS address_city, \n  c.address_state AS address_state,\
+    \ \n  c.address_country AS address_country, \n  c.date_of_birth AS date_of_birth,\
+    \ \n  c.gender AS gender, \n  c.preferred_contact_method AS preferred_contact_method\
+    \ \nFROM \n  customers c;"
+  explanation: The query selects all necessary columns from the 'customers' table
+    to populate the 'gold.customer_group_metrics' target table. Each column is aliased
+    to match the target schema exactly. No joins or aggregations are needed as the
+    target grain is at the customer level, which matches the primary key of the 'customers'
+    table.
+quality_assurance:
+  rules: []
+machine_learning:
+  type: python
+  code: "import pandas as pd\nfrom sklearn.cluster import KMeans\nimport matplotlib.pyplot\
+    \ as plt\n\n# Assuming df is already loaded as a Pandas DataFrame\n\n# Select\
+    \ relevant features for clustering\nfeatures = ['total_lifetime_value']\nX = df[features]\n\
+    \n# Initialize the KMeans model\nkmeans = KMeans(n_clusters=3, random_state=42)\n\
+    \n# Fit the model\nkmeans.fit(X)\n\n# Predict the clusters\nclusters = kmeans.predict(X)\n\
+    \n# Map the cluster labels to customer segments\ncluster_mapping = {0: 'At-Risk',\
+    \ 1: 'Loyal', 2: 'VIP'}\n# Ensure the mapping is correct by checking the cluster\
+    \ centers\ncluster_centers = kmeans.cluster_centers_.flatten()\n# Sort the cluster\
+    \ centers and map accordingly\nsorted_indices = cluster_centers.argsort()\nfor\
+    \ i, index in enumerate(sorted_indices):\n    cluster_mapping[index] = ['At-Risk',\
+    \ 'Loyal', 'VIP'][i]\n\n# Apply the mapping to the clusters\ncustomer_segments\
+    \ = pd.Series(clusters).map(cluster_mapping)\n\n# Add the customer segments to\
+    \ the DataFrame\ndf['customer_group'] = customer_segments\n\n# Plot the clusters\n\
+    plt.figure(figsize=(8, 6))\nplt.scatter(X['total_lifetime_value'], clusters, c=clusters,\
+    \ cmap='viridis')\nplt.xlabel('Total Lifetime Value')\nplt.ylabel('Cluster')\n\
+    plt.title('Customer Segmentation')\nplt.colorbar(label='Cluster')\nplt.show()\n\
+    plt.close()\n\n# Store the result in a variable named result\nresult = df[['customer_id',\
+    \ 'customer_group']]\n\n# Save the model to a variable named model\nmodel = kmeans"
+  explanation: The script segments customers into 'VIP', 'Loyal', and 'At-Risk' groups
+    using KMeans clustering based on the 'total_lifetime_value' feature. It initializes
+    a KMeans model with 3 clusters, fits it to the data, and predicts cluster labels.
+    The cluster centers are sorted to map the clusters to the appropriate customer
+    segments. The resulting customer groups are added to the DataFrame, and a scatter
+    plot visualizes the clusters. The final result is stored in the 'result' variable,
+    and the trained model is saved in the 'model' variable.
+  output_plot_base64: null

@@ -1,7 +1,7 @@
 """
 Embedding generation for Knowledge Graph nodes.
 
-Uses OpenAI's embedding API to generate vector representations
+Uses OpenAI or Gemini API to generate vector representations
 for columns and business terms for semantic search.
 """
 
@@ -10,30 +10,37 @@ from typing import List, Optional
 
 from loguru import logger
 
+# Try importing OpenAI
 try:
     from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    logger.warning("OpenAI not installed. Embeddings will not be available.")
+
+# Try importing Google Generative AI
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
 
 
 class EmbeddingGenerator:
-    """Generates embeddings using OpenAI's API."""
+    """Generates embeddings using OpenAI or Gemini API."""
     
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "text-embedding-3-small",
+        model: str = None, 
     ):
         """
         Initialize the embedding generator.
         
         Args:
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
+            api_key: API key
             model: Embedding model to use
         """
-        self.model = model
+        self.provider = "openai"
         self.client = None
         self._initialized = False
         
@@ -46,42 +53,62 @@ class EmbeddingGenerator:
         env_path = project_root / ".env"
         if env_path.exists():
             load_dotenv(env_path)
+            
+        # 1. Check for Gemini Key first
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key and GEMINI_AVAILABLE:
+            self.provider = "gemini"
+            genai.configure(api_key=gemini_key)
+            self.model = model or "models/embedding-001"
+            self._initialized = True
+            logger.info(f"Embedding generator initialized with provider: Gemini, model: {self.model}")
+            return
         
+        # 2. Fallback to OpenAI
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         
-        if not OPENAI_AVAILABLE:
-            logger.warning("OpenAI package not available")
-            return
-            
-        if not self.api_key or self.api_key.startswith("your_"):
-            logger.warning("OpenAI API key not configured. Embeddings disabled.")
-            return
-        
-        try:
-            self.client = OpenAI(api_key=self.api_key)
-            self._initialized = True
-            logger.info(f"Embedding generator initialized with model: {model}")
-        except Exception as e:
-            logger.error(f"Failed to initialize OpenAI client: {e}")
+        if not self.api_key:
+             logger.warning("No API key configured (OpenAI or Gemini). Embeddings disabled.")
+             return
+
+        if OPENAI_AVAILABLE:
+            try:
+                self.client = OpenAI(api_key=self.api_key)
+                self.model = model or "text-embedding-3-small"
+                self._initialized = True
+                logger.info(f"Embedding generator initialized with provider: OpenAI, model: {self.model}")
+            except Exception as e:
+                 logger.error(f"Failed to initialize OpenAI client: {e}")
+        else:
+             logger.warning("OpenAI package not available.")
+
     
     @property
     def is_available(self) -> bool:
         """Check if embedding generation is available."""
-        return self._initialized and self.client is not None
+        return self._initialized
     
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """
         Generate embedding for a single text.
-        
-        Args:
-            text: Text to embed
-            
-        Returns:
-            List of floats representing the embedding, or None if unavailable
         """
         if not self.is_available:
             return None
+            
+        if self.provider == "gemini":
+            try:
+                result = genai.embed_content(
+                    model=self.model,
+                    content=text,
+                    task_type="retrieval_document",
+                    title="Embedding"
+                )
+                return result['embedding']
+            except Exception as e:
+                logger.error(f"Failed to generate Gemini embedding: {e}")
+                return None
         
+        # OpenAI Fallback
         try:
             response = self.client.embeddings.create(
                 model=self.model,
@@ -89,7 +116,7 @@ class EmbeddingGenerator:
             )
             return response.data[0].embedding
         except Exception as e:
-            logger.error(f"Failed to generate embedding: {e}")
+            logger.error(f"Failed to generate OpenAI embedding: {e}")
             return None
     
     def generate_embeddings_batch(
@@ -99,13 +126,6 @@ class EmbeddingGenerator:
     ) -> List[Optional[List[float]]]:
         """
         Generate embeddings for multiple texts.
-        
-        Args:
-            texts: List of texts to embed
-            batch_size: Number of texts to process per API call
-            
-        Returns:
-            List of embeddings (None for failed items)
         """
         if not self.is_available:
             return [None] * len(texts)
@@ -115,17 +135,35 @@ class EmbeddingGenerator:
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
             
-            try:
-                response = self.client.embeddings.create(
-                    model=self.model,
-                    input=batch,
-                )
-                batch_embeddings = [item.embedding for item in response.data]
-                embeddings.extend(batch_embeddings)
-                logger.debug(f"Generated embeddings for batch {i//batch_size + 1}")
-            except Exception as e:
-                logger.error(f"Failed to generate batch embeddings: {e}")
-                embeddings.extend([None] * len(batch))
+            if self.provider == "gemini":
+                try:
+                    # Gemini might not support batching in the same way, looping for safety or checking docs
+                    # embed_content supports a list, but let's be safe with smaller batches or loops if needed.
+                    # Actually genai.embed_content content argument can be a list.
+                    # Note: "models/embedding-001" supports batching.
+                    result = genai.embed_content(
+                        model=self.model,
+                        content=batch,
+                        task_type="retrieval_document"
+                    )
+                    # Result is a dict with 'embedding' key which is a list of embeddings if input is list
+                    batch_embeddings = result['embedding']
+                    embeddings.extend(batch_embeddings)
+                except Exception as e:
+                    logger.error(f"Failed to generate Gemini batch embeddings: {e}")
+                    embeddings.extend([None] * len(batch))
+            
+            else: # OpenAI
+                try:
+                    response = self.client.embeddings.create(
+                        model=self.model,
+                        input=batch,
+                    )
+                    batch_embeddings = [item.embedding for item in response.data]
+                    embeddings.extend(batch_embeddings)
+                except Exception as e:
+                    logger.error(f"Failed to generate OpenAI batch embeddings: {e}")
+                    embeddings.extend([None] * len(batch))
         
         return embeddings
     

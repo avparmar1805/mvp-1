@@ -1,0 +1,146 @@
+metadata:
+  name: Daily Revenue
+  version: 1.0.0
+  description: Data product for daily analysis of revenue, revenue.
+  owner: Agentic Builder
+  created_at: '2026-01-01T17:58:50.212788'
+business_context:
+  request: Predict daily revenue for the next 7 days.
+  intent:
+    metrics:
+    - revenue
+    - revenue
+    dimensions: []
+    granularity: daily
+data_model:
+  target_table: gold.daily_revenue
+  grain: daily
+  schema:
+  - name: event_date
+    type: DATE
+    description: The date of the marketing event or order
+    nullable: false
+    primary_key: true
+  - name: total_revenue
+    type: DECIMAL(18, 2)
+    description: Total revenue generated on the given date
+    nullable: false
+    primary_key: false
+  - name: total_cost
+    type: DECIMAL(18, 2)
+    description: Total cost incurred on the given date
+    nullable: true
+    primary_key: false
+  primary_keys:
+  - event_date
+source_data:
+  datasets:
+  - products
+  - marketing_events
+  - customers
+  - orders
+transformation:
+  type: sql
+  code: WITH order_revenue AS (SELECT o.order_date AS event_date, SUM(o.total_amount)
+    AS total_revenue FROM orders o WHERE o.status = 'completed' GROUP BY o.order_date),
+    marketing_cost AS (SELECT me.event_date, SUM(me.cost) AS total_cost FROM marketing_events
+    me GROUP BY me.event_date) SELECT COALESCE(orv.event_date, mc.event_date) AS event_date,
+    COALESCE(orv.total_revenue, 0) AS total_revenue, COALESCE(mc.total_cost, 0) AS
+    total_cost FROM order_revenue orv FULL OUTER JOIN marketing_cost mc ON orv.event_date
+    = mc.event_date;
+  explanation: The query calculates daily revenue and cost by aggregating data from
+    the 'orders' and 'marketing_events' tables. It sums the 'total_amount' from 'orders'
+    for completed orders to get daily revenue and sums 'cost' from 'marketing_events'
+    to get daily marketing costs. A full outer join ensures all dates from both sources
+    are included, with COALESCE handling any missing values.
+quality_assurance:
+  rules: []
+machine_learning:
+  type: python
+  code: 'import pandas as pd
+
+    import numpy as np
+
+    from sklearn.linear_model import LinearRegression
+
+    import matplotlib.pyplot as plt
+
+
+    # Assume df is already loaded
+
+    # Preprocess the data
+
+    df[''event_date''] = pd.to_datetime(df[''event_date''])
+
+    df = df.sort_values(''event_date'')
+
+    df.set_index(''event_date'', inplace=True)
+
+
+    daily_revenue = df[''total_revenue''].resample(''D'').sum()
+
+
+    daily_revenue = daily_revenue.fillna(0)
+
+
+    daily_revenue = daily_revenue.reset_index()
+
+
+    daily_revenue[''day_of_year''] = daily_revenue[''event_date''].dt.dayofyear
+
+
+    X = daily_revenue[[''day_of_year'']]
+
+    y = daily_revenue[''total_revenue'']
+
+
+    model = LinearRegression()
+
+    model.fit(X, y)
+
+
+    last_observed_date = daily_revenue[''event_date''].max()
+
+
+    future_dates = pd.date_range(start=last_observed_date + pd.Timedelta(days=1),
+    periods=7)
+
+    future_days_of_year = future_dates.dayofyear
+
+
+    X_future = pd.DataFrame({''day_of_year'': future_days_of_year})
+
+
+    predictions = model.predict(X_future)
+
+
+    result = pd.DataFrame({''event_date'': future_dates, ''predicted_revenue'': predictions})
+
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(daily_revenue[''event_date''], daily_revenue[''total_revenue''], label=''Historical
+    Revenue'')
+
+    plt.plot(result[''event_date''], result[''predicted_revenue''], label=''Predicted
+    Revenue'', linestyle=''--'')
+
+    plt.xlabel(''Date'')
+
+    plt.ylabel(''Revenue'')
+
+    plt.title(''Revenue Forecast for Next 7 Days'')
+
+    plt.legend()
+
+    plt.show()
+
+    plt.close()'
+  explanation: The script first preprocesses the data by converting the 'event_date'
+    column to datetime and resampling the revenue data to daily frequency, filling
+    any missing days with zero revenue. It then extracts the day of the year as a
+    feature for the linear regression model. The model is trained on the historical
+    daily revenue data. For forecasting, it predicts the revenue for the next 7 days
+    using the day of the year as the feature. The results are plotted to show both
+    historical and predicted revenues.
+  output_plot_base64: null

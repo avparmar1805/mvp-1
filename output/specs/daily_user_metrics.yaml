@@ -1,0 +1,99 @@
+metadata:
+  name: Daily User Metrics
+  version: 1.0.0
+  description: Data product for daily analysis of count of unique users who viewed
+    items, count of unique users who added to cart, count of unique users who purchased
+    items.
+  owner: Agentic Builder
+  created_at: '2026-01-01T10:02:49.664557'
+business_context:
+  request: Calculate the conversion funnel showing the count of unique users who viewed,
+    added to cart, and purchased items by date.
+  intent:
+    metrics:
+    - count of unique users who viewed items
+    - count of unique users who added to cart
+    - count of unique users who purchased items
+    dimensions:
+    - date
+    granularity: daily
+data_model:
+  target_table: gold.daily_user_metrics
+  grain: daily
+  schema:
+  - name: date
+    type: DATE
+    description: The date for which the metrics are calculated
+    nullable: false
+    primary_key: true
+  - name: unique_users_viewed
+    type: INTEGER
+    description: Count of unique users who viewed items on the given date
+    nullable: false
+    primary_key: false
+  - name: unique_users_added_to_cart
+    type: INTEGER
+    description: Count of unique users who added items to cart on the given date
+    nullable: false
+    primary_key: false
+  - name: unique_users_purchased
+    type: INTEGER
+    description: Count of unique users who purchased items on the given date
+    nullable: false
+    primary_key: false
+  primary_keys:
+  - date
+source_data:
+  datasets:
+  - products
+  - user_interactions
+  - orders
+transformation:
+  type: sql
+  code: WITH user_views AS (SELECT DATE(t2.timestamp) AS date, t2.user_id FROM user_interactions
+    t2 WHERE t2.interaction_type = 'view'), user_adds AS (SELECT DATE(t2.timestamp)
+    AS date, t2.user_id FROM user_interactions t2 WHERE t2.interaction_type = 'add_to_cart'),
+    user_purchases AS (SELECT DATE(t3.order_date) AS date, t3.customer_id AS user_id
+    FROM orders t3 WHERE t3.status = 'completed') SELECT date, COUNT(DISTINCT uv.user_id)
+    AS unique_users_viewed, COUNT(DISTINCT ua.user_id) AS unique_users_added_to_cart,
+    COUNT(DISTINCT up.user_id) AS unique_users_purchased FROM (SELECT DISTINCT date
+    FROM user_views UNION SELECT DISTINCT date FROM user_adds UNION SELECT DISTINCT
+    date FROM user_purchases) dates LEFT JOIN user_views uv ON dates.date = uv.date
+    LEFT JOIN user_adds ua ON dates.date = ua.date LEFT JOIN user_purchases up ON
+    dates.date = up.date GROUP BY date ORDER BY date;
+  explanation: 'The query calculates daily user metrics by first creating three CTEs:
+    ''user_views'' for users who viewed products, ''user_adds'' for users who added
+    products to the cart, and ''user_purchases'' for users who completed purchases.
+    Each CTE extracts the date and user_id based on specific interaction types or
+    order status. The main SELECT statement then aggregates these CTEs to count unique
+    users for each interaction type per day, ensuring the results match the target
+    schema.'
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: date
+    description: Ensure the 'date' column has no null values as it is a primary key.
+  - check_type: unique
+    column: date
+    description: Ensure the 'date' column has unique values as it is a primary key.
+  - check_type: not_null
+    column: unique_users_viewed
+    description: Ensure the 'unique_users_viewed' column has no null values.
+  - check_type: min_value
+    column: unique_users_viewed
+    description: Ensure the 'unique_users_viewed' column has values greater than or
+      equal to 0.
+  - check_type: not_null
+    column: unique_users_added_to_cart
+    description: Ensure the 'unique_users_added_to_cart' column has no null values.
+  - check_type: min_value
+    column: unique_users_added_to_cart
+    description: Ensure the 'unique_users_added_to_cart' column has values greater
+      than or equal to 0.
+  - check_type: not_null
+    column: unique_users_purchased
+    description: Ensure the 'unique_users_purchased' column has no null values.
+  - check_type: min_value
+    column: unique_users_purchased
+    description: Ensure the 'unique_users_purchased' column has values greater than
+      or equal to 0.

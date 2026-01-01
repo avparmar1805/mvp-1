@@ -1,0 +1,168 @@
+metadata:
+  name: Product Analytics
+  version: 1.0.0
+  description: Data product for none analysis of support_ticket_count, sales_volume.
+  owner: Agentic Builder
+  created_at: '2026-01-01T10:12:28.891342'
+business_context:
+  request: Find products that have a high ratio of support tickets to sales volume.
+    List the top 10 products with the most tickets.
+  intent:
+    metrics:
+    - support_ticket_count
+    - sales_volume
+    dimensions:
+    - product
+    granularity: none
+data_model:
+  target_table: gold.product_analytics
+  grain: product
+  schema:
+  - name: product_id
+    type: VARCHAR
+    description: Unique identifier for each product
+    nullable: false
+    primary_key: true
+  - name: product_name
+    type: VARCHAR
+    description: Name of the product
+    nullable: true
+    primary_key: false
+  - name: category
+    type: VARCHAR
+    description: Category of the product
+    nullable: true
+    primary_key: false
+  - name: subcategory
+    type: VARCHAR
+    description: Subcategory of the product
+    nullable: true
+    primary_key: false
+  - name: brand
+    type: VARCHAR
+    description: Brand of the product
+    nullable: true
+    primary_key: false
+  - name: price
+    type: DECIMAL
+    description: Price of the product
+    nullable: true
+    primary_key: false
+  - name: cost
+    type: DECIMAL
+    description: Cost of the product
+    nullable: true
+    primary_key: false
+  - name: margin_pct
+    type: DECIMAL
+    description: Margin percentage of the product
+    nullable: true
+    primary_key: false
+  - name: stock_quantity
+    type: INTEGER
+    description: Stock quantity available for the product
+    nullable: true
+    primary_key: false
+  - name: supplier_id
+    type: VARCHAR
+    description: Identifier for the supplier of the product
+    nullable: true
+    primary_key: false
+  - name: created_at
+    type: DATE
+    description: Date when the product was created
+    nullable: true
+    primary_key: false
+  - name: is_active
+    type: BOOLEAN
+    description: Indicates if the product is active
+    nullable: true
+    primary_key: false
+  - name: rating_avg
+    type: DECIMAL
+    description: Average rating of the product
+    nullable: true
+    primary_key: false
+  - name: review_count
+    type: INTEGER
+    description: Number of reviews for the product
+    nullable: true
+    primary_key: false
+  - name: support_ticket_count
+    type: INTEGER
+    description: Count of support tickets related to the product
+    nullable: true
+    primary_key: false
+  - name: sales_volume
+    type: DECIMAL
+    description: Total sales volume for the product
+    nullable: true
+    primary_key: false
+  primary_keys:
+  - product_id
+source_data:
+  datasets:
+  - products
+  - orders
+  - user_interactions
+transformation:
+  type: sql
+  code: "WITH product_sales AS ( \n    SELECT \n        o.product_id, \n        SUM(o.total_amount)\
+    \ AS sales_volume \n    FROM \n        orders o \n    WHERE \n        o.status\
+    \ = 'completed' \n    GROUP BY \n        o.product_id \n), \nproduct_support_tickets\
+    \ AS ( \n    SELECT \n        ui.product_id, \n        COUNT(ui.interaction_id)\
+    \ AS support_ticket_count \n    FROM \n        user_interactions ui \n    WHERE\
+    \ \n        ui.interaction_type = 'support_ticket' \n    GROUP BY \n        ui.product_id\
+    \ \n) \nSELECT \n    p.product_id, \n    p.product_name, \n    p.category, \n\
+    \    p.subcategory, \n    p.brand, \n    p.price, \n    p.cost, \n    p.margin_pct,\
+    \ \n    p.stock_quantity, \n    p.supplier_id, \n    p.created_at, \n    p.is_active,\
+    \ \n    p.rating_avg, \n    p.review_count, \n    COALESCE(ps.support_ticket_count,\
+    \ 0) AS support_ticket_count, \n    COALESCE(psa.sales_volume, 0) AS sales_volume\
+    \ \nFROM \n    products p \nLEFT JOIN \n    product_sales psa ON p.product_id\
+    \ = psa.product_id \nLEFT JOIN \n    product_support_tickets ps ON p.product_id\
+    \ = ps.product_id;"
+  explanation: The query aggregates data from the 'orders' and 'user_interactions'
+    tables to calculate 'sales_volume' and 'support_ticket_count' for each product.
+    It uses CTEs to first compute these metrics and then joins them with the 'products'
+    table to form the final result, ensuring all columns match the target schema.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: product_id
+    description: Ensure product_id is not null as it is a primary key.
+  - check_type: unique
+    column: product_id
+    description: Ensure product_id is unique as it is a primary key.
+  - check_type: not_null
+    column: product_name
+    description: Ensure product_name is not null to maintain data integrity.
+  - check_type: min_value
+    column: price
+    description: Ensure price is greater than or equal to 0.
+  - check_type: min_value
+    column: cost
+    description: Ensure cost is greater than or equal to 0.
+  - check_type: min_value
+    column: margin_pct
+    description: Ensure margin_pct is greater than or equal to 0.
+  - check_type: min_value
+    column: stock_quantity
+    description: Ensure stock_quantity is greater than or equal to 0.
+  - check_type: min_value
+    column: rating_avg
+    description: Ensure rating_avg is greater than or equal to 0.
+  - check_type: max_value
+    column: rating_avg
+    description: Ensure rating_avg is less than or equal to 5.
+  - check_type: min_value
+    column: review_count
+    description: Ensure review_count is greater than or equal to 0.
+  - check_type: min_value
+    column: support_ticket_count
+    description: Ensure support_ticket_count is greater than or equal to 0.
+  - check_type: min_value
+    column: sales_volume
+    description: Ensure sales_volume is greater than or equal to 0.
+  - check_type: accepted_values
+    column: is_active
+    description: Ensure is_active contains only boolean values (true or false).

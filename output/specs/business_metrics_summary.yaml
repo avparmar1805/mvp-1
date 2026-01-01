@@ -1,0 +1,91 @@
+metadata:
+  name: Business Metrics Summary
+  version: 1.0.0
+  description: Data product for none analysis of total revenue, total cost, net profit
+    margin.
+  owner: Agentic Builder
+  created_at: '2026-01-01T10:12:14.526004'
+business_context:
+  request: Analyze product profitability by showing total revenue, total cost, and
+    net profit margin by product category for completed orders.
+  intent:
+    metrics:
+    - total revenue
+    - total cost
+    - net profit margin
+    dimensions:
+    - product category
+    granularity: none
+data_model:
+  target_table: gold.business_metrics_summary
+  grain: product category
+  schema:
+  - name: product_category
+    type: VARCHAR
+    description: Category of the product
+    nullable: false
+    primary_key: true
+  - name: total_revenue
+    type: DECIMAL(18, 2)
+    description: Total revenue generated
+    nullable: false
+    primary_key: false
+  - name: total_cost
+    type: DECIMAL(18, 2)
+    description: Total cost incurred
+    nullable: false
+    primary_key: false
+  - name: net_profit_margin
+    type: DECIMAL(5, 2)
+    description: Net profit margin percentage
+    nullable: false
+    primary_key: false
+  primary_keys:
+  - product_category
+source_data:
+  datasets:
+  - marketing_events
+  - products
+  - orders
+transformation:
+  type: sql
+  code: WITH revenue_cost AS (SELECT o.category AS product_category, SUM(o.total_amount)
+    AS total_revenue, SUM(p.cost * o.quantity) AS total_cost FROM orders o JOIN products
+    p ON o.product_id = p.product_id GROUP BY o.category) SELECT rc.product_category,
+    rc.total_revenue, rc.total_cost, ROUND((rc.total_revenue - rc.total_cost) / rc.total_revenue
+    * 100, 2) AS net_profit_margin FROM revenue_cost rc;
+  explanation: The query calculates the total revenue and total cost for each product
+    category by joining the 'orders' and 'products' tables on 'product_id'. It then
+    computes the net profit margin as a percentage. The results are grouped by product
+    category to match the target table's grain.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: product_category
+    description: Ensure that the product_category column does not contain null values
+      as it is a primary key.
+  - check_type: unique
+    column: product_category
+    description: Ensure that the product_category column contains unique values as
+      it is a primary key.
+  - check_type: not_null
+    column: total_revenue
+    description: Ensure that the total_revenue column does not contain null values.
+  - check_type: min_value
+    column: total_revenue
+    description: Ensure that the total_revenue column has values greater than or equal
+      to 0.
+  - check_type: not_null
+    column: total_cost
+    description: Ensure that the total_cost column does not contain null values.
+  - check_type: min_value
+    column: total_cost
+    description: Ensure that the total_cost column has values greater than or equal
+      to 0.
+  - check_type: not_null
+    column: net_profit_margin
+    description: Ensure that the net_profit_margin column does not contain null values.
+  - check_type: range
+    column: net_profit_margin
+    description: Ensure that the net_profit_margin column has values between -100.00
+      and 100.00, as profit margins are typically expressed as percentages.

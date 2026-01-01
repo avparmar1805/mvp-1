@@ -41,8 +41,8 @@ def main():
 
     # Define test scenarios
     test_inputs = [
-        "I need a daily sales report showing total revenue and order count by region for the last month.",
-        "Create a weekly marketing report with CTR, CVR, CPA, and ROAS"
+        "Predict daily revenue for the next 7 days.",
+        "Segment customers into VIP, Loyal, and At-Risk groups."
     ]
 
     for i, user_request in enumerate(test_inputs, 1):
@@ -62,17 +62,17 @@ def main():
                 log_output("\n✅ Success!")
                 
                 log_output("\n1. Interpreted Intent:")
-                intent = result.get("intent", {})
+                intent = result.get("intent") or {}
                 log_output(f"   Metrics: {intent.get('business_metrics')}")
                 log_output(f"   Dimensions: {intent.get('dimensions')}")
                 log_output(f"   Granularity: {intent.get('temporal_granularity')}")
                 
                 log_output("\n2. Discovered Data:")
-                discovery = result.get("discovery_result", {})
+                discovery = result.get("discovery_result") or {}
                 log_output(f"   Selected Datasets: {discovery.get('selected_datasets')}")
                 
                 log_output("\n3. Generated Data Model:")
-                model = result.get("data_model", {})
+                model = result.get("data_model") or {}
                 log_output(f"   Target Table: {model.get('target_table')}")
                 log_output(f"   Grain: {model.get('grain')}")
                 log_output(f"   Schema Columns: {len(model.get('schema', []))}")
@@ -82,19 +82,19 @@ def main():
                     log_output("     ... (more columns)")
 
                 log_output("\n4. Transformation Logic:")
-                transform = result.get("transformation", {})
+                transform = result.get("transformation") or {}
                 sql = transform.get("sql_code", "N/A")
                 log_output(f"   SQL Code: {sql}")
                 
                 log_output("\n5. Quality Checks:")
-                quality = result.get("quality_checks", {})
+                quality = result.get("quality_checks") or {}
                 checks = quality.get("quality_checks", [])
                 log_output(f"   Generated Checks: {len(checks)}")
                 for check in checks:
                     log_output(f"     - {check.get('check_type')} on {check.get('column')}")
 
                 log_output("\n6. Packaging:")
-                spec = result.get("data_product_spec", {})
+                spec = result.get("data_product_spec") or {}
                 yaml_out = result.get("yaml_output", "")
                 log_output(f"   Spec generated: {spec.get('metadata', {}).get('name')}")
                 log_output(f"   YAML Size: {len(yaml_out)} chars")

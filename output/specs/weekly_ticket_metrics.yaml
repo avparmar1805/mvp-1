@@ -1,0 +1,117 @@
+metadata:
+  name: Weekly Ticket Metrics
+  version: 1.0.0
+  description: Data product for weekly analysis of number of tickets, average resolution
+    time in hours, average satisfaction score.
+  owner: Agentic Builder
+  created_at: '2025-12-31T11:52:08.706112'
+business_context:
+  request: Create a weekly support analysis report showing the number of tickets,
+    average resolution time in hours, and average satisfaction score by priority and
+    category.
+  intent:
+    metrics:
+    - number of tickets
+    - average resolution time in hours
+    - average satisfaction score
+    dimensions:
+    - priority
+    - category
+    granularity: weekly
+data_model:
+  target_table: gold.weekly_ticket_metrics
+  grain: weekly
+  schema:
+  - name: week_start_date
+    type: DATE
+    description: The start date of the week for which metrics are calculated
+    nullable: false
+    primary_key: true
+  - name: priority
+    type: VARCHAR
+    description: The priority level of the tickets
+    nullable: false
+    primary_key: true
+  - name: category
+    type: VARCHAR
+    description: The category of the tickets
+    nullable: false
+    primary_key: true
+  - name: number_of_tickets
+    type: INTEGER
+    description: The total number of tickets for the given week, priority, and category
+    nullable: false
+    primary_key: false
+  - name: average_resolution_time_hours
+    type: DECIMAL(5,2)
+    description: The average resolution time of tickets in hours for the given week,
+      priority, and category
+    nullable: true
+    primary_key: false
+  - name: average_satisfaction_score
+    type: DECIMAL(3,2)
+    description: The average satisfaction score of tickets for the given week, priority,
+      and category
+    nullable: true
+    primary_key: false
+  primary_keys:
+  - week_start_date
+  - priority
+  - category
+source_data:
+  datasets:
+  - products
+  - orders
+transformation:
+  type: sql
+  code: WITH weekly_orders AS (SELECT DATE_TRUNC('week', order_date) AS week_start_date,
+    category, COUNT(order_id) AS number_of_tickets FROM orders GROUP BY DATE_TRUNC('week',
+    order_date), category) SELECT wo.week_start_date, 'N/A' AS priority, wo.category,
+    wo.number_of_tickets, NULL AS average_resolution_time_hours, NULL AS average_satisfaction_score
+    FROM weekly_orders wo;
+  explanation: The query calculates the number of orders (tickets) per week and category
+    from the 'orders' table. It uses a CTE to group the orders by the start of the
+    week and category, counting the number of orders. The result is then selected
+    with static values for 'priority', 'average_resolution_time_hours', and 'average_satisfaction_score'
+    as these metrics are not available in the source data.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: week_start_date
+    description: Ensure the week_start_date is not null as it is a primary key.
+  - check_type: unique
+    column: week_start_date
+    description: Ensure the week_start_date is unique as it is a primary key.
+  - check_type: not_null
+    column: priority
+    description: Ensure the priority is not null as it is a primary key.
+  - check_type: unique
+    column: priority
+    description: Ensure the priority is unique in combination with other primary keys.
+  - check_type: not_null
+    column: category
+    description: Ensure the category is not null as it is a primary key.
+  - check_type: unique
+    column: category
+    description: Ensure the category is unique in combination with other primary keys.
+  - check_type: not_null
+    column: number_of_tickets
+    description: Ensure the number_of_tickets is not null.
+  - check_type: min_value
+    column: number_of_tickets
+    description: Ensure the number_of_tickets is greater than or equal to 0.
+  - check_type: min_value
+    column: average_resolution_time_hours
+    description: Ensure the average_resolution_time_hours is greater than or equal
+      to 0.
+  - check_type: min_value
+    column: average_satisfaction_score
+    description: Ensure the average_satisfaction_score is greater than or equal to
+      0.
+  - check_type: max_value
+    column: average_satisfaction_score
+    description: Ensure the average_satisfaction_score is less than or equal to 5.
+  - check_type: accepted_values
+    column: priority
+    description: Ensure the priority is one of the accepted values, such as 'Low',
+      'Medium', 'High'.

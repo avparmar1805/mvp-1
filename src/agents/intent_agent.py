@@ -29,6 +29,11 @@ class IntentAgent:
         response_schema = {
             "type": "object",
             "properties": {
+                "task_type": {
+                    "type": "string",
+                    "enum": ["ANALYTICS", "ML"],
+                    "description": "Type of task: 'ANALYTICS' for SQL reports, 'ML' for predictive/prescriptive tasks."
+                },
                 "business_metrics": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -43,41 +48,52 @@ class IntentAgent:
                     "type": "string",
                     "description": "Time granularity (daily, weekly, monthly, etc.)"
                 },
+                "ml_parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_variable": {"type": "string"},
+                        "model_type": {"type": "string", "enum": ["FORECASTING", "CLUSTERING", "SENTIMENT"]},
+                        "horizon": {"type": "string"}
+                    },
+                    "description": "Parameters specific to ML tasks"
+                },
                 "filters": {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "List of filter conditions"
                 }
             },
-            "required": ["business_metrics", "dimensions", "temporal_granularity"]
+            "required": ["task_type", "business_metrics", "dimensions", "temporal_granularity"]
         }
         
         llm_output = self.llm.generate_structured_output(
             prompt,
             response_schema=response_schema,
-            system_prompt="You are a business analyst expert. Extract structured requirements from the user request."
+            system_prompt="You are a business expert. Classify the request and extract requirements."
         )
         
         # Default empty values if LLM fails
         if not llm_output:
             llm_output = {
+                "task_type": "ANALYTICS",
                 "business_metrics": [],
                 "dimensions": [],
                 "temporal_granularity": None,
                 "filters": []
             }
 
-        # Step 2: Map to business terms in KG (Placeholder)
-        # business_terms = self.kg.find_business_terms(llm_output.get("business_metrics", [])) if self.kg else []
-        business_terms = [] # Placeholder until KG is integrated
+        # Step 2: Map to business terms (Placeholder)
+        business_terms = [] 
 
-        # Step 3: Calculate confidence (Placeholder logic)
+        # Step 3: Calculate confidence
         confidence = self._calculate_confidence(llm_output, business_terms)
         
         return {
+            "task_type": llm_output.get("task_type", "ANALYTICS"),
             "business_metrics": llm_output.get("business_metrics", []),
             "dimensions": llm_output.get("dimensions", []),
             "temporal_granularity": llm_output.get("temporal_granularity"),
+            "ml_parameters": llm_output.get("ml_parameters", {}),
             "filters": llm_output.get("filters", []),
             "business_terms": business_terms,
             "confidence_score": confidence
@@ -86,16 +102,18 @@ class IntentAgent:
     def _build_prompt(self, user_request: str) -> str:
         return f"""
         Analyze the following data request:
-
         Request: "{user_request}"
-
-        Extract:
-        1. Business metrics to calculate (e.g., revenue, count, average)
-        2. Dimensions for grouping (e.g., region, category, date)
-        3. Time granularity (hourly, daily, weekly, monthly, none)
-        4. Any specific filters or conditions
-
-        Respond in valid JSON format matching the schema.
+        
+        Tasks:
+        1. Classify as "ANALYTICS" (historical reporting) or "ML" (future prediction, segmentation, sentiment).
+           - CRITICAL RULE: If the user asks to PREDICT, FORECAST, CLUSTER, SEGMENT, or RECOMMEND, you MUST set task_type="ML".
+        2. Extract metrics, dimensions, and filters.
+        3. If ML, extract target variable and model type.
+           - "Predict revenue" -> FORECASTING
+           - "Cluster/Segment customers" -> CLUSTERING
+           - "Analyze sentiment" -> SENTIMENT
+        
+        Respond in valid JSON.
         """
 
     def _calculate_confidence(self, llm_output: Dict, business_terms: List) -> float:

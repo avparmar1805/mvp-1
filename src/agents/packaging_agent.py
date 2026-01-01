@@ -22,11 +22,12 @@ class PackagingAgent:
         Returns:
             Dictionary containing the structured 'data_product_spec' and 'yaml_output'.
         """
-        intent = state.get("intent", {})
-        discovery = state.get("discovery_result", {})
-        data_model = state.get("data_model", {})
-        transformation = state.get("transformation", {})
-        quality = state.get("quality_checks", {})
+
+        intent = state.get("intent") or {}
+        discovery = state.get("discovery_result") or {}
+        data_model = state.get("data_model") or {}
+        transformation = state.get("transformation") or {}
+        quality = state.get("quality_checks") or {}
         
         # 1. Generate Metadata
         metadata = self._generate_metadata(intent, data_model)
@@ -60,6 +61,16 @@ class PackagingAgent:
                 "rules": quality.get("quality_checks", [])
             }
         }
+        
+        # Add ML specific section if available
+        if state.get("ml_result"):
+            ml_res = state["ml_result"]
+            spec["machine_learning"] = {
+                "type": "python",
+                "code": ml_res.get("code", ""),
+                "explanation": ml_res.get("explanation", ""),
+                "output_plot_base64": ml_res.get("plot", "")
+            }
         
         # 3. generate YAML
         yaml_output = yaml.dump(spec, sort_keys=False, default_flow_style=False)

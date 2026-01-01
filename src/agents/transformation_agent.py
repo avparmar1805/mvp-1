@@ -66,13 +66,22 @@ class TransformationAgent:
         {target_str}
         
         Instructions:
-        1. Select columns from source tables.
-        2. Perform necessary joins.
-        3. Apply aggregations to match the target grain.
-        4. Alias columns to match the target schema exactly.
-        5. Use standard ANSI SQL (DuckDB compatible).
-        6. CRITICAL: Return ONLY a SELECT statement (or CTEs + SELECT).
-        7. DO NOT use INSERT, UPDATE, DELETE, or CREATE TABLE statements.
+        1. CRITICAL: Select the most appropriate source tables from the provided list.
+           - If the request mentions "orders", "sales", or "revenue", prefer the 'orders' table if available.
+           - 'marketing_events' tracks ad spend, NOT product sales revenue.
+           - If metrics come from different entities (e.g., Revenue from Orders, Cost from Products), you MUST JOIN them.
+        2. Select columns from the chosen source tables.
+        3. Perform necessary joins (e.g., orders.product_id = products.product_id).
+        4. Apply aggregations to match the target grain.
+        5. Alias columns to match the target schema exactly.
+        6. Use standard ANSI SQL (DuckDB compatible).
+           - CRITICAL: For date formatting, use `strftime(date_column, '%Y-%m')`.
+           - DO NOT use `DATE_FORMAT` (it is not supported in DuckDB).
+        6. CRITICAL: Use table aliases (e.g., t1.col) for EVERY column to prevent ambiguity errors.
+           - NEVER use reserved keywords as aliases (e.g., 'is', 'as', 'on', 'user', 'from', 'to').
+           - Use simple aliases like 't1', 't2', 't3' or descriptive abbreviations (e.g., 'cust', 'prod').
+        7. CRITICAL: Return ONLY a SELECT statement (or CTEs + SELECT).
+        8. DO NOT use INSERT, UPDATE, DELETE, or CREATE TABLE statements.
         
         Respond in valid JSON matching the schema.
         """

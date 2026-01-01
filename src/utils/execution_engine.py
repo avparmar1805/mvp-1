@@ -61,6 +61,19 @@ class ExecutionEngine:
             
         except Exception as e:
             return False, None, str(e)
+            
+    def execute_query_df(self, sql: str) -> Tuple[bool, Any, str]:
+        """
+        Execute a SQL query and return a Pandas DataFrame.
+        """
+        try:
+            # Execute
+            df = self.conn.execute(sql).fetchdf()
+            msg = f"Executed successfully. Returned {len(df)} rows."
+            return True, df, msg
+            
+        except Exception as e:
+            return False, None, str(e)
 
     def get_registered_tables(self) -> List[str]:
         """List tables currently registered in DuckDB."""

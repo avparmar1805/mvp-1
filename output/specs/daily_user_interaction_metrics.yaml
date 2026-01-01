@@ -1,0 +1,94 @@
+metadata:
+  name: Daily User Interaction Metrics
+  version: 1.0.0
+  description: Data product for daily analysis of count of unique users who viewed
+    items, count of unique users who added to cart, count of unique users who purchased
+    items.
+  owner: Agentic Builder
+  created_at: '2026-01-01T10:12:39.993237'
+business_context:
+  request: Calculate the conversion funnel showing the count of unique users who viewed,
+    added to cart, and purchased items by date.
+  intent:
+    metrics:
+    - count of unique users who viewed items
+    - count of unique users who added to cart
+    - count of unique users who purchased items
+    dimensions:
+    - date
+    granularity: daily
+data_model:
+  target_table: gold.daily_user_interaction_metrics
+  grain: daily
+  schema:
+  - name: date
+    type: DATE
+    description: The date of the interaction
+    nullable: false
+    primary_key: true
+  - name: unique_users_viewed
+    type: INTEGER
+    description: Count of unique users who viewed items
+    nullable: false
+    primary_key: false
+  - name: unique_users_added_to_cart
+    type: INTEGER
+    description: Count of unique users who added items to cart
+    nullable: false
+    primary_key: false
+  - name: unique_users_purchased
+    type: INTEGER
+    description: Count of unique users who purchased items
+    nullable: false
+    primary_key: false
+  primary_keys:
+  - date
+source_data:
+  datasets:
+  - products
+  - user_interactions
+  - orders
+  - customers
+  - marketing_campaigns
+transformation:
+  type: sql
+  code: WITH interaction_metrics AS (SELECT DATE(ui.timestamp) AS interaction_date,
+    ui.user_id, CASE WHEN ui.interaction_type = 'view' THEN 1 ELSE 0 END AS viewed,
+    CASE WHEN ui.interaction_type = 'add_to_cart' THEN 1 ELSE 0 END AS added_to_cart,
+    CASE WHEN ui.interaction_type = 'purchase' THEN 1 ELSE 0 END AS purchased FROM
+    user_interactions ui) SELECT im.interaction_date AS date, COUNT(DISTINCT CASE
+    WHEN im.viewed = 1 THEN im.user_id END) AS unique_users_viewed, COUNT(DISTINCT
+    CASE WHEN im.added_to_cart = 1 THEN im.user_id END) AS unique_users_added_to_cart,
+    COUNT(DISTINCT CASE WHEN im.purchased = 1 THEN im.user_id END) AS unique_users_purchased
+    FROM interaction_metrics im GROUP BY im.interaction_date;
+  explanation: The query first creates a CTE 'interaction_metrics' to extract and
+    categorize user interactions by type (view, add_to_cart, purchase) on a daily
+    basis. It then aggregates the data to count unique users for each interaction
+    type per day, matching the target schema's requirements.
+quality_assurance:
+  rules:
+  - check_type: not_null
+    column: date
+    description: Ensure the date column is not null as it is a primary key.
+  - check_type: unique
+    column: date
+    description: Ensure the date column is unique as it is a primary key.
+  - check_type: not_null
+    column: unique_users_viewed
+    description: Ensure the unique_users_viewed column is not null.
+  - check_type: min_value
+    column: unique_users_viewed
+    description: Ensure the unique_users_viewed column has a minimum value of 0.
+  - check_type: not_null
+    column: unique_users_added_to_cart
+    description: Ensure the unique_users_added_to_cart column is not null.
+  - check_type: min_value
+    column: unique_users_added_to_cart
+    description: Ensure the unique_users_added_to_cart column has a minimum value
+      of 0.
+  - check_type: not_null
+    column: unique_users_purchased
+    description: Ensure the unique_users_purchased column is not null.
+  - check_type: min_value
+    column: unique_users_purchased
+    description: Ensure the unique_users_purchased column has a minimum value of 0.

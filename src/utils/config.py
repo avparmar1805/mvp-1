@@ -22,6 +22,7 @@ class LLMConfig(BaseModel):
     """LLM API configuration."""
     openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key")
     anthropic_api_key: Optional[str] = Field(default=None, description="Anthropic API key")
+    gemini_api_key: Optional[str] = Field(default=None, description="Gemini API key")
     default_model: str = Field(default="gpt-4", description="Default LLM model to use")
     
     @classmethod
@@ -29,12 +30,13 @@ class LLMConfig(BaseModel):
         return cls(
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+            gemini_api_key=os.getenv("GEMINI_API_KEY"),
         )
     
     @property
     def is_configured(self) -> bool:
         """Check if at least one LLM API key is configured."""
-        return bool(self.openai_api_key or self.anthropic_api_key)
+        return bool(self.openai_api_key or self.anthropic_api_key or self.gemini_api_key)
 
 
 class Neo4jConfig(BaseModel):
