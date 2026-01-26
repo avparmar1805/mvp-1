@@ -1,0 +1,279 @@
+{
+  "user_request": "Show me daily revenue by region for high-value customers",
+  "intent": {
+    "task_type": "ANALYTICS",
+    "business_metrics": [
+      "revenue"
+    ],
+    "dimensions": [
+      "region"
+    ],
+    "temporal_granularity": "daily",
+    "ml_parameters": null,
+    "filters": [
+      "high-value customers"
+    ],
+    "business_terms": [],
+    "confidence_score": 1.0
+  },
+  "discovery": {
+    "candidate_datasets": [
+      {
+        "node_type": "Dataset",
+        "name": "orders",
+        "description": "Order transactions with temporal patterns and seasonal variations",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/orders/orders.parquet",
+        "row_count": 101000,
+        "size_bytes": 2962236,
+        "created_at": "2025-12-07T21:14:22.308068",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "order",
+          "transaction",
+          "sales"
+        ],
+        "quality_score": 0.8,
+        "freshness": "daily",
+        "matched_columns": [
+          "total_amount",
+          "total_amount",
+          "region",
+          "region"
+        ],
+        "matched_terms": [
+          "region",
+          "revenue"
+        ],
+        "relevance_score": 0.76,
+        "columns": [
+          "order_id",
+          "customer_id",
+          "product_id",
+          "order_date",
+          "quantity",
+          "unit_price",
+          "total_amount",
+          "region",
+          "category",
+          "status",
+          "discount_amount",
+          "tax_amount",
+          "shipping_cost"
+        ],
+        "column_count": 13
+      },
+      {
+        "node_type": "Dataset",
+        "name": "marketing_events",
+        "description": "Marketing events with funnel metrics (impressions, clicks, conversions)",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/marketing_events/events.parquet",
+        "row_count": 500000,
+        "size_bytes": 11310990,
+        "created_at": "2025-12-07T21:14:34.549316",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "marketing",
+          "event",
+          "streaming"
+        ],
+        "quality_score": 0.9,
+        "freshness": "daily",
+        "matched_columns": [
+          "revenue",
+          "revenue"
+        ],
+        "matched_terms": [
+          "revenue"
+        ],
+        "relevance_score": 0.53,
+        "columns": [
+          "event_id",
+          "campaign_id",
+          "event_date",
+          "event_type",
+          "user_id",
+          "cost",
+          "revenue",
+          "device_type",
+          "browser",
+          "location"
+        ],
+        "column_count": 10
+      },
+      {
+        "node_type": "Dataset",
+        "name": "products",
+        "description": "Product catalog with pricing and category information",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/products/products.parquet",
+        "row_count": 1000,
+        "size_bytes": 62523,
+        "created_at": "2025-12-07T21:14:20.317961",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "product",
+          "master_data"
+        ],
+        "quality_score": 0.9,
+        "freshness": "daily",
+        "matched_columns": [
+          "price",
+          "price"
+        ],
+        "matched_terms": [
+          "revenue"
+        ],
+        "relevance_score": 0.53,
+        "columns": [
+          "product_id",
+          "product_name",
+          "category",
+          "subcategory",
+          "brand",
+          "price",
+          "cost",
+          "margin_pct",
+          "stock_quantity",
+          "supplier_id",
+          "created_at",
+          "is_active",
+          "rating_avg",
+          "review_count"
+        ],
+        "column_count": 14
+      },
+      {
+        "node_type": "Dataset",
+        "name": "customers",
+        "description": "Customer master data with profile and loyalty information",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/customers/customers.parquet",
+        "row_count": 10000,
+        "size_bytes": 735058,
+        "created_at": "2025-12-07T21:14:20.212111",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "customer",
+          "master_data"
+        ],
+        "quality_score": 0.85,
+        "freshness": "daily",
+        "matched_columns": [
+          "total_lifetime_value",
+          "total_lifetime_value"
+        ],
+        "matched_terms": [
+          "revenue"
+        ],
+        "relevance_score": 0.515,
+        "columns": [
+          "customer_id",
+          "name",
+          "email",
+          "phone",
+          "signup_date",
+          "loyalty_tier",
+          "total_lifetime_value",
+          "segment",
+          "address_city",
+          "address_state",
+          "address_country",
+          "date_of_birth",
+          "gender",
+          "preferred_contact_method"
+        ],
+        "column_count": 14
+      }
+    ],
+    "selected_datasets": [
+      "orders",
+      "marketing_events",
+      "products",
+      "customers"
+    ]
+  },
+  "modeling": {
+    "target_table": "gold.daily_revenue_by_region",
+    "grain": "daily, region",
+    "schema": [
+      {
+        "name": "date",
+        "type": "DATE",
+        "description": "The date for which the revenue is recorded",
+        "nullable": false,
+        "primary_key": true
+      },
+      {
+        "name": "region",
+        "type": "VARCHAR",
+        "description": "The region where the revenue is generated",
+        "nullable": false,
+        "primary_key": true
+      },
+      {
+        "name": "total_revenue",
+        "type": "DECIMAL",
+        "description": "Total revenue generated in the region on the given date",
+        "nullable": false,
+        "primary_key": false
+      }
+    ],
+    "primary_keys": [
+      "date",
+      "region"
+    ]
+  },
+  "transformation": {
+    "sql_code": "WITH revenue_data AS (SELECT o.order_date AS date, o.region, SUM(o.total_amount) AS total_revenue FROM orders o GROUP BY o.order_date, o.region) SELECT rd.date, rd.region, rd.total_revenue FROM revenue_data rd;",
+    "explanation": "The query calculates the total revenue generated per day per region from the 'orders' table. It groups the data by 'order_date' and 'region', summing up the 'total_amount' to get the 'total_revenue'. The result is then selected to match the target schema."
+  },
+  "quality": {
+    "quality_checks": [
+      {
+        "check_type": "not_null",
+        "column": "date",
+        "description": "Ensure the 'date' column does not contain null values as it is a primary key."
+      },
+      {
+        "check_type": "unique",
+        "column": "date",
+        "description": "Ensure the 'date' column contains unique values as it is part of the primary key."
+      },
+      {
+        "check_type": "not_null",
+        "column": "region",
+        "description": "Ensure the 'region' column does not contain null values as it is a primary key."
+      },
+      {
+        "check_type": "unique",
+        "column": "region",
+        "description": "Ensure the combination of 'date' and 'region' is unique as they form the composite primary key."
+      },
+      {
+        "check_type": "not_null",
+        "column": "total_revenue",
+        "description": "Ensure the 'total_revenue' column does not contain null values."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_revenue",
+        "description": "Ensure the 'total_revenue' column has values greater than or equal to 0, as revenue cannot be negative."
+      },
+      {
+        "check_type": "accepted_values",
+        "column": "region",
+        "description": "Ensure the 'region' column contains only valid region identifiers. This requires a predefined list of acceptable region values."
+      }
+    ]
+  }
+}
