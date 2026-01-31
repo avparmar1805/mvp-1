@@ -1,0 +1,517 @@
+{
+  "user_request": "Show me daily sales by region and category",
+  "intent": {
+    "task_type": "ANALYTICS",
+    "business_metrics": [
+      "sales"
+    ],
+    "dimensions": [
+      "region",
+      "category"
+    ],
+    "temporal_granularity": "daily",
+    "ml_parameters": {},
+    "filters": [],
+    "business_terms": [],
+    "confidence_score": 1.0
+  },
+  "discovery_result": {
+    "candidate_datasets": [
+      {
+        "node_type": "Dataset",
+        "name": "orders",
+        "description": "Order transactions with temporal patterns and seasonal variations",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/orders/orders.parquet",
+        "row_count": 101000,
+        "size_bytes": 2962236,
+        "created_at": "2025-12-07T21:14:22.308068",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "order",
+          "transaction",
+          "sales"
+        ],
+        "quality_score": 0.8,
+        "freshness": "daily",
+        "matched_columns": [
+          "total_amount",
+          "total_amount",
+          "region",
+          "region",
+          "category",
+          "category"
+        ],
+        "matched_terms": [
+          "category",
+          "sales",
+          "region"
+        ],
+        "relevance_score": 0.8200000000000001,
+        "columns": [
+          "order_id",
+          "customer_id",
+          "product_id",
+          "order_date",
+          "quantity",
+          "unit_price",
+          "total_amount",
+          "region",
+          "category",
+          "status",
+          "discount_amount",
+          "tax_amount",
+          "shipping_cost"
+        ],
+        "column_count": 13
+      },
+      {
+        "node_type": "Dataset",
+        "name": "products",
+        "description": "Product catalog with pricing and category information",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/products/products.parquet",
+        "row_count": 1000,
+        "size_bytes": 62523,
+        "created_at": "2025-12-07T21:14:20.317961",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "product",
+          "master_data"
+        ],
+        "quality_score": 0.9,
+        "freshness": "daily",
+        "matched_columns": [
+          "price",
+          "price",
+          "category",
+          "category"
+        ],
+        "matched_terms": [
+          "sales",
+          "category"
+        ],
+        "relevance_score": 0.6566666666666667,
+        "columns": [
+          "product_id",
+          "product_name",
+          "category",
+          "subcategory",
+          "brand",
+          "price",
+          "cost",
+          "margin_pct",
+          "stock_quantity",
+          "supplier_id",
+          "created_at",
+          "is_active",
+          "rating_avg",
+          "review_count"
+        ],
+        "column_count": 14
+      },
+      {
+        "node_type": "Dataset",
+        "name": "marketing_events",
+        "description": "Marketing events with funnel metrics (impressions, clicks, conversions)",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/marketing_events/events.parquet",
+        "row_count": 500000,
+        "size_bytes": 11310990,
+        "created_at": "2025-12-07T21:14:34.549316",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "marketing",
+          "event",
+          "streaming"
+        ],
+        "quality_score": 0.9,
+        "freshness": "daily",
+        "matched_columns": [
+          "revenue",
+          "revenue"
+        ],
+        "matched_terms": [
+          "sales"
+        ],
+        "relevance_score": 0.4633333333333334,
+        "columns": [
+          "event_id",
+          "campaign_id",
+          "event_date",
+          "event_type",
+          "user_id",
+          "cost",
+          "revenue",
+          "device_type",
+          "browser",
+          "location"
+        ],
+        "column_count": 10
+      },
+      {
+        "node_type": "Dataset",
+        "name": "customers",
+        "description": "Customer master data with profile and loyalty information",
+        "layer": "bronze",
+        "format": "parquet",
+        "path": "data/bronze/customers/customers.parquet",
+        "row_count": 10000,
+        "size_bytes": 735058,
+        "created_at": "2025-12-07T21:14:20.212111",
+        "owner": "data_engineering",
+        "tags": [
+          "bronze",
+          "customer",
+          "master_data"
+        ],
+        "quality_score": 0.85,
+        "freshness": "daily",
+        "matched_columns": [
+          "total_lifetime_value",
+          "total_lifetime_value"
+        ],
+        "matched_terms": [
+          "sales"
+        ],
+        "relevance_score": 0.44833333333333336,
+        "columns": [
+          "customer_id",
+          "name",
+          "email",
+          "phone",
+          "signup_date",
+          "loyalty_tier",
+          "total_lifetime_value",
+          "segment",
+          "address_city",
+          "address_state",
+          "address_country",
+          "date_of_birth",
+          "gender",
+          "preferred_contact_method"
+        ],
+        "column_count": 14
+      }
+    ],
+    "selected_datasets": [
+      "orders",
+      "products",
+      "marketing_events",
+      "customers"
+    ]
+  },
+  "data_model": {
+    "target_table": "gold.daily_sales_metrics",
+    "grain": "daily",
+    "schema": [
+      {
+        "name": "date",
+        "type": "DATE",
+        "description": "The date of the sales data",
+        "nullable": false,
+        "primary_key": true
+      },
+      {
+        "name": "region",
+        "type": "VARCHAR",
+        "description": "The region where the sales occurred",
+        "nullable": false,
+        "primary_key": true
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR",
+        "description": "The category of the products sold",
+        "nullable": false,
+        "primary_key": true
+      },
+      {
+        "name": "total_sales",
+        "type": "DECIMAL",
+        "description": "Total sales amount for the day, region, and category",
+        "nullable": false,
+        "primary_key": false
+      },
+      {
+        "name": "total_quantity",
+        "type": "INTEGER",
+        "description": "Total quantity of products sold for the day, region, and category",
+        "nullable": false,
+        "primary_key": false
+      },
+      {
+        "name": "total_discount",
+        "type": "DECIMAL",
+        "description": "Total discount amount applied for the day, region, and category",
+        "nullable": true,
+        "primary_key": false
+      },
+      {
+        "name": "total_tax",
+        "type": "DECIMAL",
+        "description": "Total tax amount collected for the day, region, and category",
+        "nullable": true,
+        "primary_key": false
+      },
+      {
+        "name": "total_shipping_cost",
+        "type": "DECIMAL",
+        "description": "Total shipping cost for the day, region, and category",
+        "nullable": true,
+        "primary_key": false
+      }
+    ],
+    "primary_keys": [
+      "date",
+      "region",
+      "category"
+    ]
+  },
+  "transformation": {
+    "sql_code": "WITH sales_data AS (SELECT o.order_date AS date, o.region, o.category, SUM(o.total_amount) AS total_sales, SUM(o.quantity) AS total_quantity, SUM(o.discount_amount) AS total_discount, SUM(o.tax_amount) AS total_tax, SUM(o.shipping_cost) AS total_shipping_cost FROM orders o GROUP BY o.order_date, o.region, o.category) SELECT strftime(sd.date, '%Y-%m-%d') AS date, sd.region, sd.category, sd.total_sales, sd.total_quantity, sd.total_discount, sd.total_tax, sd.total_shipping_cost FROM sales_data sd;",
+    "explanation": "The query aggregates data from the 'orders' table to calculate daily sales metrics. It groups the data by order date, region, and category, summing up total sales, quantity, discount, tax, and shipping cost. The results are then formatted to match the target schema, with the date formatted as 'YYYY-MM-DD'."
+  },
+  "quality_checks": {
+    "quality_checks": [
+      {
+        "check_type": "not_null",
+        "column": "date",
+        "description": "Ensure the date column is not null as it is part of the primary key."
+      },
+      {
+        "check_type": "not_null",
+        "column": "region",
+        "description": "Ensure the region column is not null as it is part of the primary key."
+      },
+      {
+        "check_type": "not_null",
+        "column": "category",
+        "description": "Ensure the category column is not null as it is part of the primary key."
+      },
+      {
+        "check_type": "not_null",
+        "column": "total_sales",
+        "description": "Ensure the total_sales column is not null to maintain data integrity."
+      },
+      {
+        "check_type": "not_null",
+        "column": "total_quantity",
+        "description": "Ensure the total_quantity column is not null to maintain data integrity."
+      },
+      {
+        "check_type": "unique",
+        "column": "date, region, category",
+        "description": "Ensure the combination of date, region, and category is unique as it forms the primary key."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_sales",
+        "description": "Ensure total_sales is greater than or equal to 0 as sales cannot be negative."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_quantity",
+        "description": "Ensure total_quantity is greater than or equal to 0 as quantity cannot be negative."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_discount",
+        "description": "Ensure total_discount is greater than or equal to 0 as discounts cannot be negative."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_tax",
+        "description": "Ensure total_tax is greater than or equal to 0 as tax cannot be negative."
+      },
+      {
+        "check_type": "min_value",
+        "column": "total_shipping_cost",
+        "description": "Ensure total_shipping_cost is greater than or equal to 0 as shipping costs cannot be negative."
+      }
+    ]
+  },
+  "ml_result": null,
+  "data_product_spec": {
+    "metadata": {
+      "name": "Daily Sales Metrics",
+      "version": "1.0.0",
+      "description": "Data product for daily analysis of sales.",
+      "owner": "Agentic Builder",
+      "created_at": "2026-01-30T22:36:29.799856"
+    },
+    "business_context": {
+      "request": "Show me daily sales by region and category",
+      "intent": {
+        "metrics": [
+          "sales"
+        ],
+        "dimensions": [
+          "region",
+          "category"
+        ],
+        "granularity": "daily"
+      }
+    },
+    "data_model": {
+      "target_table": "gold.daily_sales_metrics",
+      "grain": "daily",
+      "schema": [
+        {
+          "name": "date",
+          "type": "DATE",
+          "description": "The date of the sales data",
+          "nullable": false,
+          "primary_key": true
+        },
+        {
+          "name": "region",
+          "type": "VARCHAR",
+          "description": "The region where the sales occurred",
+          "nullable": false,
+          "primary_key": true
+        },
+        {
+          "name": "category",
+          "type": "VARCHAR",
+          "description": "The category of the products sold",
+          "nullable": false,
+          "primary_key": true
+        },
+        {
+          "name": "total_sales",
+          "type": "DECIMAL",
+          "description": "Total sales amount for the day, region, and category",
+          "nullable": false,
+          "primary_key": false
+        },
+        {
+          "name": "total_quantity",
+          "type": "INTEGER",
+          "description": "Total quantity of products sold for the day, region, and category",
+          "nullable": false,
+          "primary_key": false
+        },
+        {
+          "name": "total_discount",
+          "type": "DECIMAL",
+          "description": "Total discount amount applied for the day, region, and category",
+          "nullable": true,
+          "primary_key": false
+        },
+        {
+          "name": "total_tax",
+          "type": "DECIMAL",
+          "description": "Total tax amount collected for the day, region, and category",
+          "nullable": true,
+          "primary_key": false
+        },
+        {
+          "name": "total_shipping_cost",
+          "type": "DECIMAL",
+          "description": "Total shipping cost for the day, region, and category",
+          "nullable": true,
+          "primary_key": false
+        }
+      ],
+      "primary_keys": [
+        "date",
+        "region",
+        "category"
+      ]
+    },
+    "source_data": {
+      "datasets": [
+        "orders",
+        "products",
+        "marketing_events",
+        "customers"
+      ]
+    },
+    "transformation": {
+      "type": "sql",
+      "code": "WITH sales_data AS (SELECT o.order_date AS date, o.region, o.category, SUM(o.total_amount) AS total_sales, SUM(o.quantity) AS total_quantity, SUM(o.discount_amount) AS total_discount, SUM(o.tax_amount) AS total_tax, SUM(o.shipping_cost) AS total_shipping_cost FROM orders o GROUP BY o.order_date, o.region, o.category) SELECT strftime(sd.date, '%Y-%m-%d') AS date, sd.region, sd.category, sd.total_sales, sd.total_quantity, sd.total_discount, sd.total_tax, sd.total_shipping_cost FROM sales_data sd;",
+      "explanation": "The query aggregates data from the 'orders' table to calculate daily sales metrics. It groups the data by order date, region, and category, summing up total sales, quantity, discount, tax, and shipping cost. The results are then formatted to match the target schema, with the date formatted as 'YYYY-MM-DD'."
+    },
+    "quality_assurance": {
+      "rules": [
+        {
+          "check_type": "not_null",
+          "column": "date",
+          "description": "Ensure the date column is not null as it is part of the primary key."
+        },
+        {
+          "check_type": "not_null",
+          "column": "region",
+          "description": "Ensure the region column is not null as it is part of the primary key."
+        },
+        {
+          "check_type": "not_null",
+          "column": "category",
+          "description": "Ensure the category column is not null as it is part of the primary key."
+        },
+        {
+          "check_type": "not_null",
+          "column": "total_sales",
+          "description": "Ensure the total_sales column is not null to maintain data integrity."
+        },
+        {
+          "check_type": "not_null",
+          "column": "total_quantity",
+          "description": "Ensure the total_quantity column is not null to maintain data integrity."
+        },
+        {
+          "check_type": "unique",
+          "column": "date, region, category",
+          "description": "Ensure the combination of date, region, and category is unique as it forms the primary key."
+        },
+        {
+          "check_type": "min_value",
+          "column": "total_sales",
+          "description": "Ensure total_sales is greater than or equal to 0 as sales cannot be negative."
+        },
+        {
+          "check_type": "min_value",
+          "column": "total_quantity",
+          "description": "Ensure total_quantity is greater than or equal to 0 as quantity cannot be negative."
+        },
+        {
+          "check_type": "min_value",
+          "column": "total_discount",
+          "description": "Ensure total_discount is greater than or equal to 0 as discounts cannot be negative."
+        },
+        {
+          "check_type": "min_value",
+          "column": "total_tax",
+          "description": "Ensure total_tax is greater than or equal to 0 as tax cannot be negative."
+        },
+        {
+          "check_type": "min_value",
+          "column": "total_shipping_cost",
+          "description": "Ensure total_shipping_cost is greater than or equal to 0 as shipping costs cannot be negative."
+        }
+      ]
+    },
+    "sla": {
+      "freshness": "daily at 6:00 AM UTC",
+      "latency": "< 1 hour",
+      "completeness": "> 99%"
+    }
+  },
+  "yaml_output": "metadata:\n  name: Daily Sales Metrics\n  version: 1.0.0\n  description: Data product for daily analysis of sales.\n  owner: Agentic Builder\n  created_at: '2026-01-30T22:36:29.799856'\nbusiness_context:\n  request: Show me daily sales by region and category\n  intent:\n    metrics:\n    - sales\n    dimensions:\n    - region\n    - category\n    granularity: daily\ndata_model:\n  target_table: gold.daily_sales_metrics\n  grain: daily\n  schema:\n  - name: date\n    type: DATE\n    description: The date of the sales data\n    nullable: false\n    primary_key: true\n  - name: region\n    type: VARCHAR\n    description: The region where the sales occurred\n    nullable: false\n    primary_key: true\n  - name: category\n    type: VARCHAR\n    description: The category of the products sold\n    nullable: false\n    primary_key: true\n  - name: total_sales\n    type: DECIMAL\n    description: Total sales amount for the day, region, and category\n    nullable: false\n    primary_key: false\n  - name: total_quantity\n    type: INTEGER\n    description: Total quantity of products sold for the day, region, and category\n    nullable: false\n    primary_key: false\n  - name: total_discount\n    type: DECIMAL\n    description: Total discount amount applied for the day, region, and category\n    nullable: true\n    primary_key: false\n  - name: total_tax\n    type: DECIMAL\n    description: Total tax amount collected for the day, region, and category\n    nullable: true\n    primary_key: false\n  - name: total_shipping_cost\n    type: DECIMAL\n    description: Total shipping cost for the day, region, and category\n    nullable: true\n    primary_key: false\n  primary_keys:\n  - date\n  - region\n  - category\nsource_data:\n  datasets:\n  - orders\n  - products\n  - marketing_events\n  - customers\ntransformation:\n  type: sql\n  code: WITH sales_data AS (SELECT o.order_date AS date, o.region, o.category, SUM(o.total_amount)\n    AS total_sales, SUM(o.quantity) AS total_quantity, SUM(o.discount_amount) AS total_discount,\n    SUM(o.tax_amount) AS total_tax, SUM(o.shipping_cost) AS total_shipping_cost FROM\n    orders o GROUP BY o.order_date, o.region, o.category) SELECT strftime(sd.date,\n    '%Y-%m-%d') AS date, sd.region, sd.category, sd.total_sales, sd.total_quantity,\n    sd.total_discount, sd.total_tax, sd.total_shipping_cost FROM sales_data sd;\n  explanation: The query aggregates data from the 'orders' table to calculate daily\n    sales metrics. It groups the data by order date, region, and category, summing\n    up total sales, quantity, discount, tax, and shipping cost. The results are then\n    formatted to match the target schema, with the date formatted as 'YYYY-MM-DD'.\nquality_assurance:\n  rules:\n  - check_type: not_null\n    column: date\n    description: Ensure the date column is not null as it is part of the primary key.\n  - check_type: not_null\n    column: region\n    description: Ensure the region column is not null as it is part of the primary\n      key.\n  - check_type: not_null\n    column: category\n    description: Ensure the category column is not null as it is part of the primary\n      key.\n  - check_type: not_null\n    column: total_sales\n    description: Ensure the total_sales column is not null to maintain data integrity.\n  - check_type: not_null\n    column: total_quantity\n    description: Ensure the total_quantity column is not null to maintain data integrity.\n  - check_type: unique\n    column: date, region, category\n    description: Ensure the combination of date, region, and category is unique as\n      it forms the primary key.\n  - check_type: min_value\n    column: total_sales\n    description: Ensure total_sales is greater than or equal to 0 as sales cannot\n      be negative.\n  - check_type: min_value\n    column: total_quantity\n    description: Ensure total_quantity is greater than or equal to 0 as quantity cannot\n      be negative.\n  - check_type: min_value\n    column: total_discount\n    description: Ensure total_discount is greater than or equal to 0 as discounts\n      cannot be negative.\n  - check_type: min_value\n    column: total_tax\n    description: Ensure total_tax is greater than or equal to 0 as tax cannot be negative.\n  - check_type: min_value\n    column: total_shipping_cost\n    description: Ensure total_shipping_cost is greater than or equal to 0 as shipping\n      costs cannot be negative.\nsla:\n  freshness: daily at 6:00 AM UTC\n  latency: < 1 hour\n  completeness: '> 99%'\n",
+  "workflow_result": {
+    "dag_code": "# Airflow DAG Template for Data Products\n# Generated by Agentic Data Product Builder\n\nfrom datetime import datetime, timedelta\nfrom airflow import DAG\nfrom airflow.operators.python import PythonOperator\nfrom airflow.operators.bash import BashOperator\nfrom airflow.utils.dates import days_ago\n\n# DAG Configuration\nDAG_ID = \"Daily_Sales_Metrics_v1_0_0\"\nDESCRIPTION = \"Data product for daily analysis of sales.\"\nSCHEDULE_INTERVAL = \"00 6 * * *\"\nDATA_PRODUCT_ID = \"Daily_Sales_Metrics_1_0_0\"\nDATA_PRODUCT_VERSION = \"1.0.0\"\n\n# Default arguments\ndefault_args = {\n    'owner': 'Agentic Builder',\n    'depends_on_past': False,\n    'email_on_failure': True,\n    'email_on_retry': False,\n    'retries': 3,\n    'retry_delay': timedelta(minutes=5),\n}\n\n# Create DAG\ndag = DAG(\n    DAG_ID,\n    default_args=default_args,\n    description=DESCRIPTION,\n    schedule_interval=SCHEDULE_INTERVAL,\n    start_date=days_ago(1),\n    catchup=False,\n    tags=['data_product', 'Daily Sales Metrics'],\n)\n\n\ndef validate_source_freshness(**context):\n    \"\"\"Validate that source datasets are fresh enough\"\"\"\n    import sys\n    sys.path.insert(0, '/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1')\n    \n    from src.utils.data_quality import check_source_freshness\n    \n    datasets = []\n    \n    for dataset in datasets:\n        is_fresh = check_source_freshness(dataset)\n        if not is_fresh:\n            raise ValueError(f\"Source dataset {dataset} is not fresh enough\")\n    \n    print(f\"\u2705 All {len(datasets)} source datasets are fresh\")\n    return True\n\n\ndef execute_transformation(**context):\n    \"\"\"Execute the data transformation\"\"\"\n    import sys\n    sys.path.insert(0, '/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1')\n    \n    import duckdb\n    \n    # Read SQL from file or inline\n    sql = \"\"\"\"\"\"\n    \n    # Execute transformation\n    conn = duckdb.connect('data/warehouse.db')\n    conn.execute(sql)\n    conn.close()\n    \n    print(\"\u2705 SQL transformation executed successfully\")\n    \n    return True\n\n\ndef run_quality_checks(**context):\n    \"\"\"Run data quality checks\"\"\"\n    import sys\n    sys.path.insert(0, '/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1')\n    \n    from src.utils.data_quality import execute_quality_rules\n    \n    quality_rules = []\n    target_table = \"gold.daily_sales_metrics\"\n    \n    results = execute_quality_rules(target_table, quality_rules)\n    \n    failed_rules = [r for r in results if r['status'] == 'failed']\n    \n    if failed_rules:\n        print(f\"\u274c {len(failed_rules)} quality checks failed\")\n        for rule in failed_rules:\n            print(f\"  - {rule['rule_id']}: {rule['message']}\")\n        raise ValueError(\"Quality checks failed\")\n    \n    print(f\"\u2705 All {len(results)} quality checks passed\")\n    return results\n\n\ndef update_registry_metadata(**context):\n    \"\"\"Update data product registry with execution metadata\"\"\"\n    import sys\n    import requests\n    from datetime import datetime\n    \n    sys.path.insert(0, '/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1')\n    \n    execution_date = context['ds']\n    task_instance = context['task_instance']\n    \n    # Get execution metrics\n    duration_ms = int((datetime.now() - task_instance.start_date).total_seconds() * 1000)\n    \n    # Update registry\n    payload = {\n        \"version\": DATA_PRODUCT_VERSION,\n        \"status\": \"success\",\n        \"duration_ms\": duration_ms,\n        \"rows_processed\": context.get('rows_processed', 0),\n        \"rows_output\": context.get('rows_output', 0),\n        \"quality_check_results\": context.get('quality_results', {})\n    }\n    \n    response = requests.post(\n        f\"http://localhost:8001/api/v1/registry/data-products/{DATA_PRODUCT_ID}/executions\",\n        json=payload\n    )\n    \n    if response.status_code == 201:\n        print(\"\u2705 Registry updated successfully\")\n    else:\n        print(f\"\u26a0\ufe0f  Failed to update registry: {response.text}\")\n    \n    return True\n\n\n# Task 1: Validate source data freshness\nvalidate_sources = PythonOperator(\n    task_id='validate_source_freshness',\n    python_callable=validate_source_freshness,\n    dag=dag,\n)\n\n# Task 2: Execute transformation\ntransform = PythonOperator(\n    task_id='execute_transformation',\n    python_callable=execute_transformation,\n    dag=dag,\n)\n\n# Task 3: Run quality checks\nquality_check = PythonOperator(\n    task_id='run_quality_checks',\n    python_callable=run_quality_checks,\n    dag=dag,\n)\n\n# Task 4: Update metadata\nupdate_metadata = PythonOperator(\n    task_id='update_registry_metadata',\n    python_callable=update_registry_metadata,\n    dag=dag,\n)\n\n# Define task dependencies\nvalidate_sources >> transform >> quality_check >> update_metadata",
+    "cron_code": "#!/bin/bash\n# Cron Job for Data Product: Daily Sales Metrics\n# Generated by Agentic Data Product Builder\n# Schedule: 00 6 * * *\n\nset -e\n\n# Configuration\nDATA_PRODUCT_ID=\"Daily_Sales_Metrics_1_0_0\"\nDATA_PRODUCT_VERSION=\"1.0.0\"\nEXECUTION_DATE=$(date +%Y-%m-%d)\nLOG_FILE=\"/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1/logs/data_products/Daily Sales Metrics_${EXECUTION_DATE}.log\"\nPROJECT_ROOT=\"/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1\"\n\n# Ensure log directory exists\nmkdir -p \"/Users/anshulparmar/Documents/Personal/MTech/Dissertation/Projects/mvp-1/logs/data_products\"\n\n{\n    echo \"==========================================\"\n    echo \"Data Product: Daily Sales Metrics\"\n    echo \"Execution Date: ${EXECUTION_DATE}\"\n    echo \"Started at: $(date)\"\n    echo \"==========================================\"\n    \n    # Step 1: Validate source data freshness\n    echo \"\"\n    echo \"[1/4] Validating source data freshness...\"\n    python3 \"${PROJECT_ROOT}/src/utils/validate_sources.py\" \\\n        --datasets \n    \n    if [ $? -ne 0 ]; then\n        echo \"\u274c Source validation failed\"\n        exit 1\n    fi\n    echo \"\u2705 Source validation passed\"\n    \n    # Step 2: Execute transformation\n    echo \"\"\n    echo \"[2/4] Executing transformation...\"\n    duckdb data/warehouse.db < \"${PROJECT_ROOT}/sql/Daily Sales Metrics.sql\"\n    \n    if [ $? -ne 0 ]; then\n        echo \"\u274c Transformation failed\"\n        exit 1\n    fi\n    echo \"\u2705 Transformation completed\"\n    \n    # Step 3: Run quality checks\n    echo \"\"\n    echo \"[3/4] Running quality checks...\"\n    python3 \"${PROJECT_ROOT}/src/utils/quality_check.py\" \\\n        --data-product-id \"${DATA_PRODUCT_ID}\" \\\n        --target-table \"gold.daily_sales_metrics\"\n    \n    if [ $? -ne 0 ]; then\n        echo \"\u274c Quality checks failed\"\n        exit 1\n    fi\n    echo \"\u2705 Quality checks passed\"\n    \n    # Step 4: Update registry\n    echo \"\"\n    echo \"[4/4] Updating registry...\"\n    curl -X POST \"http://localhost:8001/api/v1/registry/data-products/${DATA_PRODUCT_ID}/executions\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"{\n            \\\"version\\\": \\\"${DATA_PRODUCT_VERSION}\\\",\n            \\\"status\\\": \\\"success\\\",\n            \\\"execution_date\\\": \\\"${EXECUTION_DATE}\\\"\n        }\"\n    \n    echo \"\"\n    echo \"==========================================\"\n    echo \"\u2705 Execution completed successfully\"\n    echo \"Finished at: $(date)\"\n    echo \"==========================================\"\n    \n} >> \"$LOG_FILE\" 2>&1\n\n# Check exit status\nif [ $? -eq 0 ]; then\n    echo \"\u2705 Data product execution successful. Log: $LOG_FILE\"\n    exit 0\nelse\n    echo \"\u274c Data product execution failed. Check log: $LOG_FILE\"\n    exit 1\nfi",
+    "schedule": "00 6 * * *",
+    "data_product_id": "Daily_Sales_Metrics_1_0_0",
+    "dag_file": "generated_workflows/dags/Daily_Sales_Metrics_v1_0_0.py",
+    "cron_file": "generated_workflows/cron/Daily_Sales_Metrics.sh"
+  },
+  "errors": []
+}

@@ -6,10 +6,13 @@ from src.agents.modeling_agent import ModelingAgent
 from src.agents.transformation_agent import TransformationAgent
 from src.agents.quality_agent import QualityAgent
 from src.agents.packaging_agent import PackagingAgent
+from src.agents.workflow_agent import WorkflowAgent
 from src.utils.llm_client import LLMClient
 from src.knowledge_graph.queries import KnowledgeGraphQueryService, create_query_service
 from src.agents.ml_agent import MachineLearningAgent
 from src.utils.execution_engine import ExecutionEngine
+from src.knowledge_graph.usage_analytics import UsageAnalyticsService
+from src.knowledge_graph.learning_engine import LearningEngine
 
 # Define the state of the data product generation workflow
 class DataProductState(TypedDict):
@@ -22,6 +25,7 @@ class DataProductState(TypedDict):
     ml_result: Optional[Dict[str, Any]]  # New: Store ML results
     data_product_spec: Optional[Dict[str, Any]]
     yaml_output: Optional[str]
+    workflow_result: Optional[Dict[str, Any]]  # New: Store workflow generation results
     errors: List[str]
 
 class OrchestratorAgent:
@@ -42,9 +46,14 @@ class OrchestratorAgent:
         self.quality_agent = QualityAgent(self.llm_client)
         self.ml_agent = MachineLearningAgent(self.llm_client) # New
         self.packaging_agent = PackagingAgent()
+        self.workflow_agent = WorkflowAgent()  # New: Workflow generation
         
         # Initialize Execution Engine for ML data fetching
         self.execution_engine = ExecutionEngine()
+        
+        # Initialize Learning components
+        self.usage_analytics = UsageAnalyticsService()
+        self.learning_engine = LearningEngine(self.usage_analytics, self.kg_service.kg)
         
         # Build the workflow graph
         self.workflow = self._build_workflow()
@@ -60,6 +69,7 @@ class OrchestratorAgent:
         workflow.add_node("process_quality", self._run_quality)
         workflow.add_node("process_ml", self._run_ml) # New node
         workflow.add_node("process_packaging", self._run_packaging)
+        workflow.add_node("process_workflow", self._run_workflow)  # New: Workflow generation
         
         # Define edges
         workflow.set_entry_point("process_intent")
@@ -85,7 +95,8 @@ class OrchestratorAgent:
         
         workflow.add_edge("process_quality", "process_packaging")
         workflow.add_edge("process_ml", "process_packaging") # ML also goes to packaging
-        workflow.add_edge("process_packaging", END)
+        workflow.add_edge("process_packaging", "process_workflow")  # Packaging -> Workflow
+        workflow.add_edge("process_workflow", END)  # Workflow is the final step
         
         return workflow.compile()
 
@@ -103,10 +114,16 @@ class OrchestratorAgent:
             ml_result=None,
             data_product_spec=None,
             yaml_output=None,
+            workflow_result=None,
             errors=[]
         )
         
         result = self.workflow.invoke(initial_state)
+        
+        # Record usage for learning (if successful)
+        if not result.get("errors") and result.get("discovery_result"):
+            self._record_usage(user_request, result)
+        
         return result
 
     # --- Node Implementations ---
@@ -204,5 +221,88 @@ class OrchestratorAgent:
             return result
         except Exception as e:
             return {"errors": state["errors"] + [f"Packaging Error: {str(e)}"]}
+    
+    def _run_workflow(self, state: DataProductState) -> Dict[str, Any]:
+        """
+        Generate workflow orchestration (Airflow DAG and cron job) from data product spec.
+        """
+        try:
+            spec = state.get("data_product_spec")
+            if not spec:
+                return {"errors": state["errors"] + ["Skipping workflow: No data product spec found"]}
+            
+            # Generate a unique data product ID from metadata
+            metadata = spec.get("metadata", {})
+            name = metadata.get("name", "unnamed_product")
+            version = metadata.get("version", "1.0.0")
+            data_product_id = f"{name}_{version}".replace(" ", "_").replace(".", "_")
+            
+            # Generate Airflow DAG
+            dag_code = self.workflow_agent.generate_airflow_dag(
+                data_product_spec=spec,
+                data_product_id=data_product_id
+            )
+            
+            # Generate cron job script
+            cron_code = self.workflow_agent.generate_cron_job(
+                data_product_spec=spec,
+                data_product_id=data_product_id
+            )
+            
+            # Extract schedule information
+            sla = spec.get("sla", {})
+            schedule = self.workflow_agent._extract_schedule(sla)
+            
+            return {
+                "workflow_result": {
+                    "dag_code": dag_code,
+                    "cron_code": cron_code,
+                    "schedule": schedule,
+                    "data_product_id": data_product_id,
+                    "dag_file": f"generated_workflows/dags/{self.workflow_agent._sanitize_dag_id(name, version)}.py",
+                    "cron_file": f"generated_workflows/cron/{name.replace(' ', '_')}.sh"
+                }
+            }
+        except Exception as e:
+            return {"errors": state["errors"] + [f"Workflow Error: {str(e)}"]}
+    
+    def _record_usage(self, user_request: str, result: Dict[str, Any]):
+        """
+        Record usage event for Knowledge Graph learning
+        
+        Args:
+            user_request: Original user query
+            result: Pipeline execution result
+        """
+        try:
+            # Extract datasets from discovery result
+            discovery = result.get("discovery_result", {})
+            datasets = discovery.get("selected_datasets", [])
+            
+            # Handle both string and dict formats
+            dataset_names = []
+            for ds in datasets:
+                if isinstance(ds, str):
+                    dataset_names.append(ds)
+                elif isinstance(ds, dict):
+                    dataset_names.append(ds.get("name", ""))
+            
+            # Get data product ID if available
+            spec = result.get("data_product_spec", {})
+            metadata = spec.get("metadata", {})
+            data_product_id = metadata.get("name", "").replace(" ", "_")
+            
+            # Record usage event
+            if dataset_names:
+                self.learning_engine.process_usage_event(
+                    query=user_request,
+                    selected_datasets=dataset_names,
+                    data_product_id=data_product_id
+                )
+        except Exception as e:
+            # Don't fail the main pipeline if usage tracking fails
+            import logging
+            logging.warning(f"Failed to record usage: {e}")
+
 
 

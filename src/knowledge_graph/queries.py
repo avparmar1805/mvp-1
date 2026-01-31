@@ -59,17 +59,24 @@ class KnowledgeGraphQueryService:
             found_datasets = {}
             
             for term in all_terms:
-                semantic_results = self.semantic_column_search(term, top_k=3)
-                for res in semantic_results:
-                    # 'res' is a column node dict, needs to be mapped to dataset
-                    ds_name = res.get("dataset_name")
-                    if ds_name and ds_name not in found_datasets:
-                        # fetch dataset node
-                        ds_node = self.kg.get_dataset(ds_name)
-                        if ds_node:
-                            # Add a relevance score based on semantic similarity
-                            ds_node["relevance_score"] = res.get("similarity", 0.5)
-                            found_datasets[ds_name] = ds_node
+                try:
+                    semantic_results = self.semantic_column_search(term, top_k=3)
+                    for res in semantic_results:
+                        # 'res' is a column node dict, needs to be mapped to dataset
+                        ds_name = res.get("dataset_name")
+                        if ds_name and ds_name not in found_datasets:
+                            # fetch dataset node
+                            ds_node = self.kg.get_dataset(ds_name)
+                            if ds_node:
+                                # Add a relevance score based on semantic similarity
+                                ds_node["relevance_score"] = res.get("similarity", 0.5)
+                                found_datasets[ds_name] = ds_node
+                except Exception as e:
+                    # Embedding dimension mismatch or other semantic search errors
+                    logger.warning(f"Semantic search failed for term '{term}': {e}")
+                    logger.info("Falling back to keyword-based search...")
+                    # Continue without semantic search - keyword search already ran above
+                    continue
             
             results = list(found_datasets.values())
 

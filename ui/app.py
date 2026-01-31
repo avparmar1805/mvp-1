@@ -43,7 +43,8 @@ def main():
     page = st.sidebar.radio("Go to", [
         "📂 Product Catalog", 
         "➕ New Data Product",
-        "💾 Raw Data Explorer" # NEW
+        "💾 Raw Data Explorer",
+        "⚙️ Generated Workflows" # NEW
     ])
     
     if page == "📂 Product Catalog":
@@ -52,6 +53,8 @@ def main():
         render_builder()
     elif page == "💾 Raw Data Explorer":
         render_explorer()
+    elif page == "⚙️ Generated Workflows":
+        render_workflows()
 
 def render_explorer():
     st.title("💾 Bronze Data Explorer")
@@ -162,6 +165,106 @@ def render_catalog():
                 del st.session_state.selected_product
                 st.rerun()
 
+def render_workflows():
+    """Display generated Airflow DAGs and cron jobs"""
+    st.title("⚙️ Generated Workflows")
+    st.markdown("View all generated Airflow DAGs and cron job scripts.")
+    
+    from pathlib import Path
+    
+    # Tabs for DAGs and Cron
+    tab_dags, tab_cron = st.tabs(["🚀 Airflow DAGs", "⏰ Cron Jobs"])
+    
+    with tab_dags:
+        st.subheader("Airflow DAG Files")
+        dag_dir = Path(project_root) / "generated_workflows" / "dags"
+        
+        if dag_dir.exists():
+            dag_files = list(dag_dir.glob("*.py"))
+            
+            if dag_files:
+                st.info(f"Found {len(dag_files)} DAG files")
+                
+                # Display each DAG
+                for dag_file in sorted(dag_files, key=lambda x: x.stat().st_mtime, reverse=True):
+                    with st.expander(f"📄 {dag_file.name}", expanded=False):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("File Size", f"{dag_file.stat().st_size / 1024:.1f} KB")
+                        with col2:
+                            import datetime
+                            mtime = datetime.datetime.fromtimestamp(dag_file.stat().st_mtime)
+                            st.metric("Modified", mtime.strftime("%Y-%m-%d %H:%M"))
+                        with col3:
+                            # Extract schedule from file
+                            try:
+                                content = dag_file.read_text()
+                                import re
+                                schedule_match = re.search(r'SCHEDULE_INTERVAL = "(.+?)"', content)
+                                if schedule_match:
+                                    st.metric("Schedule", schedule_match.group(1))
+                            except:
+                                pass
+                        
+                        # Show code
+                        st.code(dag_file.read_text(), language="python")
+                        
+                        # Download button
+                        st.download_button(
+                            "⬇️ Download DAG",
+                            dag_file.read_text(),
+                            file_name=dag_file.name,
+                            mime="text/x-python"
+                        )
+            else:
+                st.warning("No DAG files found. Create a data product to generate workflows!")
+        else:
+            st.warning("DAG directory not found. Workflows will be created here after generating data products.")
+    
+    with tab_cron:
+        st.subheader("Cron Job Scripts")
+        cron_dir = Path(project_root) / "generated_workflows" / "cron"
+        
+        if cron_dir.exists():
+            cron_files = list(cron_dir.glob("*.sh"))
+            
+            if cron_files:
+                st.info(f"Found {len(cron_files)} cron scripts")
+                
+                # Display each cron script
+                for cron_file in sorted(cron_files, key=lambda x: x.stat().st_mtime, reverse=True):
+                    with st.expander(f"⏰ {cron_file.name}", expanded=False):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("File Size", f"{cron_file.stat().st_size / 1024:.1f} KB")
+                        with col2:
+                            import datetime
+                            mtime = datetime.datetime.fromtimestamp(cron_file.stat().st_mtime)
+                            st.metric("Modified", mtime.strftime("%Y-%m-%d %H:%M"))
+                        
+                        # Show code
+                        st.code(cron_file.read_text(), language="bash")
+                        
+                        # Download button
+                        st.download_button(
+                            "⬇️ Download Script",
+                            cron_file.read_text(),
+                            file_name=cron_file.name,
+                            mime="text/x-shellscript"
+                        )
+                        
+                        # Installation instructions
+                        st.info(f"""**To install this cron job:**
+```bash
+chmod +x {cron_file}
+crontab -e
+# Add the schedule line from the script
+```""")
+            else:
+                st.warning("No cron scripts found. Create a data product to generate workflows!")
+        else:
+            st.warning("Cron directory not found. Workflows will be created here after generating data products.")
+
 def render_builder():
     st.title("➕ New Data Product")
     st.markdown("Build data products from natural language using AI agents.")
@@ -208,9 +311,9 @@ def run_generation(request):
             st.error(f"Failed to initialize agents: {e}")
             return
 
-    # Tabs
-    tab_spec, tab_data, tab_sql, tab_quality, tab_logs = st.tabs([
-        "📄 Specification", "📊 Data Preview", "🛠 Transformation", "✅ Quality", "📝 Logs"
+    # Tabs - Added Workflow tab
+    tab_spec, tab_data, tab_sql, tab_quality, tab_workflow, tab_logs = st.tabs([
+        "📄 Specification", "📊 Data Preview", "🛠 Transformation", "✅ Quality", "⚙️ Workflow", "📝 Logs"
     ])
 
     # Run Pipeline
@@ -316,7 +419,84 @@ def run_generation(request):
         else:
             st.info("No quality checks generated.")
 
-    # 5. Logs Tab
+    # 5. Workflow Tab (NEW)
+    with tab_workflow:
+        workflow_result = result.get("workflow_result")
+        
+        if workflow_result:
+            st.success("✅ Workflow generation successful!")
+            
+            # Display metadata
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Data Product ID", workflow_result.get("data_product_id", "N/A"))
+            with col2:
+                st.metric("Schedule", workflow_result.get("schedule", "N/A"))
+            with col3:
+                st.metric("Workflow Type", "Airflow + Cron")
+            
+            st.divider()
+            
+            # Show generated files
+            st.subheader("📁 Generated Files")
+            dag_file = workflow_result.get("dag_file", "")
+            cron_file = workflow_result.get("cron_file", "")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info(f"**Airflow DAG:** `{dag_file}`")
+            with col2:
+                st.info(f"**Cron Script:** `{cron_file}`")
+            
+            st.divider()
+            
+            # Display DAG code
+            dag_code = workflow_result.get("dag_code", "")
+            if dag_code:
+                with st.expander("🚀 View Airflow DAG Code", expanded=True):
+                    st.code(dag_code, language="python")
+                    st.download_button(
+                        "⬇️ Download DAG",
+                        dag_code,
+                        file_name=f"{workflow_result.get('data_product_id', 'dag')}.py",
+                        mime="text/x-python"
+                    )
+            
+            # Display Cron code
+            cron_code = workflow_result.get("cron_code", "")
+            if cron_code:
+                with st.expander("⏰ View Cron Job Script", expanded=False):
+                    st.code(cron_code, language="bash")
+                    st.download_button(
+                        "⬇️ Download Cron Script",
+                        cron_code,
+                        file_name=f"{workflow_result.get('data_product_id', 'cron')}.sh",
+                        mime="text/x-shellscript"
+                    )
+                    
+                    # Installation instructions
+                    st.info("""**To install this cron job:**
+```bash
+chmod +x script.sh
+crontab -e
+# Add: {} script.sh
+```""".format(workflow_result.get("schedule", "0 6 * * *")))
+            
+            # Next steps
+            st.divider()
+            st.subheader("🎯 Next Steps")
+            st.markdown("""
+            1. **Deploy DAG**: Copy the DAG file to your Airflow `dags/` folder
+            2. **Or use Cron**: Install the cron script on your server
+            3. **Monitor**: Check execution logs and data quality
+            4. **Iterate**: Refine based on results
+            """)
+        else:
+            st.warning("No workflow generated. This might be an ML task or an error occurred.")
+            if result.get("ml_result"):
+                st.info("This is an ML task. Workflows are generated for analytics/reporting tasks.")
+    
+    # 6. Logs Tab
     with tab_logs:
         st.json(result)
 

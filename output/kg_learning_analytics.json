@@ -1,0 +1,139 @@
+{
+  "usage_stats": {
+    "period_days": 1,
+    "total_events": 5,
+    "events_by_type": {
+      "dataset_selection": 5
+    },
+    "top_datasets": [
+      {
+        "name": "orders",
+        "count": 5
+      },
+      {
+        "name": "customers",
+        "count": 5
+      },
+      {
+        "name": "products",
+        "count": 4
+      },
+      {
+        "name": "marketing_events",
+        "count": 4
+      }
+    ],
+    "top_cooccurrences": [
+      {
+        "datasets": [
+          "customers",
+          "marketing_events"
+        ],
+        "count": 12
+      },
+      {
+        "datasets": [
+          "marketing_events",
+          "orders"
+        ],
+        "count": 5
+      },
+      {
+        "datasets": [
+          "orders",
+          "products"
+        ],
+        "count": 4
+      },
+      {
+        "datasets": [
+          "marketing_events",
+          "products"
+        ],
+        "count": 3
+      },
+      {
+        "datasets": [
+          "customers",
+          "orders"
+        ],
+        "count": 1
+      }
+    ]
+  },
+  "learning_stats": {
+    "usage_stats": {
+      "period_days": 30,
+      "total_events": 5,
+      "events_by_type": {
+        "dataset_selection": 5
+      },
+      "top_datasets": [
+        {
+          "name": "orders",
+          "count": 5
+        },
+        {
+          "name": "customers",
+          "count": 5
+        },
+        {
+          "name": "products",
+          "count": 4
+        },
+        {
+          "name": "marketing_events",
+          "count": 4
+        }
+      ],
+      "top_cooccurrences": [
+        {
+          "datasets": [
+            "customers",
+            "marketing_events"
+          ],
+          "count": 12
+        },
+        {
+          "datasets": [
+            "marketing_events",
+            "orders"
+          ],
+          "count": 5
+        },
+        {
+          "datasets": [
+            "orders",
+            "products"
+          ],
+          "count": 4
+        },
+        {
+          "datasets": [
+            "marketing_events",
+            "products"
+          ],
+          "count": 3
+        },
+        {
+          "datasets": [
+            "customers",
+            "orders"
+          ],
+          "count": 1
+        }
+      ]
+    },
+    "total_cooccurrences": 5,
+    "datasets_with_scores": 4,
+    "learning_enabled": true
+  },
+  "test_queries": [
+    "Show me daily sales by region and category",
+    "Create a sales report by region",
+    "Analyze revenue by category and region",
+    "Show me customer orders by region",
+    "Build a product sales analysis by category"
+  ],
+  "timestamp": "1769793933.8540108"
+}

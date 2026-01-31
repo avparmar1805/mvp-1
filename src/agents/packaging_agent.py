@@ -59,6 +59,11 @@ class PackagingAgent:
             },
             "quality_assurance": {
                 "rules": quality.get("quality_checks", [])
+            },
+            "sla": {
+                "freshness": intent.get("temporal_granularity", "Daily") + " at 6:00 AM UTC",
+                "latency": "< 1 hour",
+                "completeness": "> 99%"
             }
         }
         
